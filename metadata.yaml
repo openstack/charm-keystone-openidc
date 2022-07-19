@@ -1,0 +1,31 @@
+name: keystone-openidc
+subordinate: true
+maintainer: OpenStack Charmers <openstack-charmers@lists.ubuntu.com>
+display-name: Keystone OpenID Connect
+summary: Federated identity with OpenID Connect for Keystone
+description: |
+  This subordinate charm provides a way to integrate a Open ID Connect based
+  identity provider with Keystone using
+  [mod_auth_openidc](https://github.com/zmartzone/mod_auth_openidc). Apache
+  operates as a OpenID Connect Relaying Party towards an OpenID Connect
+  Provider.
+
+tags:
+  - openstack
+  - identity
+  - federation
+  - openidc
+series:
+  - focal
+  - jammy
+provides:
+  keystone-fid-service-provider:
+    interface: keystone-fid-service-provider
+    scope: container
+  websso-fid-service-provider:
+    interface: websso-fid-service-provider
+    scope: global
+requires:
+  container:
+    interface: juju-info
+    scope: container

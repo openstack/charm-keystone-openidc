@@ -1,0 +1,5 @@
+options:
+  debug:
+    default: False
+    description: Enable debugging.
+    type: boolean
