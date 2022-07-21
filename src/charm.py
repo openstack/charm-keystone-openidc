@@ -1,43 +1,127 @@
 #!/usr/bin/env python3
-# Copyright 2022 Felipe
-# See LICENSE file for licensing details.
 #
-# Learn more at: https://juju.is/docs/sdk
-
-"""Charm the service.
-
-Refer to the following post for a quick-start guide that will help you
-develop a new k8s charm using the Operator Framework:
-
-    https://discourse.charmhub.io/t/4208
-"""
+# Copyright 2022 Canonical Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import logging
+import os
+import subprocess
 
-from ops.charm import CharmBase
-from ops.framework import StoredState
-from ops.main import main
-from ops.model import ActiveStatus
+from typing import List
+
+from ops.model import StatusBase
+
+import ops.model
+import ops_openstack.core
+
+from ops_openstack.adapters import (
+    ConfigurationAdapter,
+    OpenStackOperRelationAdapter,
+)
+from charmhelpers.contrib.openstack import templating as os_templating
+from charmhelpers.core import hookenv
+from charmhelpers.core import host as ch_host
+from charmhelpers.core import templating
+
 
 logger = logging.getLogger(__name__)
+CONFIG_DIR = '/etc/apache2/openidc'
 
 
-class KeystoneOpenidcCharm(CharmBase):
-    """Charm the service."""
+class KeystoneOpenIDCOptions(ConfigurationAdapter):
+    @property
+    def openidc_location_config(self):
+        service_name = self.charm_instance.unit.app.name
+        return os.path.join(self.charm_instance.config_dir,
+                            f'openidc-location.{service_name}.conf')
 
-    _stored = StoredState()
+    @property
+    def oidc_auth_path(self):
+        service_name = self.charm_instance.unit.app.name
+        return (f'/v3/OS-FEDERATION/identity_providers/{service_name}'
+                f'/protocols/openid/auth')
 
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.framework.observe(self.on.install, self._on_install)
+
+class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
+
+    PACKAGES = ['libapache2-mod-auth-openidc']
+
+    REQUIRED_RELATIONS = ['keystone-fid-service-provider',
+                          'websso-fid-service-provider']
+
+    APACHE2_MODULE = 'auth_openidc'
+
+    CONFIG_FILE_OWNER = 'root'
+    CONFIG_FILE_GROUP = 'www-data'
+
+    release = 'xena'  # First release supported.
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        super().register_status_check(self._check_status)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.options = KeystoneOpenIDCOptions(self)
 
     def _on_config_changed(self, _):
+        for relation in self.framework.model.relations.get(
+                'keystone-fid-service-provider'):
+            self.set_relation_data(relation.data[self.unit])
+
+        self.render_config()
+
+    def services(self) -> List[str]:
+        """Determine the list of services that should be running."""
+        return []
+
+    def _check_status(self) -> StatusBase:
         pass
 
-    def _on_install(self, event):
+    def enable_module(self):
+        logger.info(f'Enabling apache2 module: {self.APACHE2_MODULE}')
+        subprocess.check_call(['a2enmod', self.APACHE2_MODULE])
+
+    def disable_module(self):
+        logger.info(f'Disabling apache2 module: {self.APACHE2_MODULE}')
+        subprocess.check_call(['a2dismod', self.APACHE2_MODULE])
+
+    def set_principal_unit_relation_data(
+            self,
+            relation_data_to_be_set: ops.model.RelationData,
+    ):
         pass
+
+    def render_config(self):
+        """Render Service Provider configuration files to be used by Apache."""
+        ch_host.mkdir(self.config_dir,
+                      perms=0o750,
+                      owner=self.CONFIG_FILE_OWNER,
+                      group=self.CONFIG_FILE_GROUP)
+        templating.render(
+            source='apache-openidc-location.conf',
+            template_loader=os_templating.get_loader('templates/',
+                                                     self.release),
+            target=self.options.openidc_location_config,
+            context={'options': KeystoneOpenIDCOptions(self)},
+            owner=self.CONFIG_FILE_OWNER,
+            group=self.CONFIG_FILE_GROUP,
+            perms=0o440
+        )
+
+    @property
+    def config_dir(self):
+        return CONFIG_DIR
 
 
 if __name__ == "__main__":
-    main(KeystoneOpenidcCharm)
+    main(ops_openstack.core.get_charm_class_for_release())
