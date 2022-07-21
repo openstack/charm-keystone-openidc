@@ -2,8 +2,20 @@ type: charm
 
 parts:
   charm:
+    after: [update-certificates]
+    charm-python-packages:
+      # See https://github.com/canonical/charmcraft/issues/551
+      - setuptools
     build-packages:
       - git
+
+  update-certificates:
+    plugin: nil
+    # See https://github.com/canonical/charmcraft/issues/658
+    override-build: |
+      apt update -qqq
+      apt install -qy ca-certificates
+      update-ca-certificates
 
 bases:
   - build-on:
