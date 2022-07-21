@@ -1,5 +1,48 @@
 options:
-  debug:
-    default: False
-    description: Enable debugging.
-    type: boolean
+  oidc-provider-metadata-url:
+    default: ''
+    type: string
+    description: |
+      URL to discover the OpenID Provider and obtain information needed to
+      interact with it, including its OAuth 2.0 endpoint locations. Example:
+      https://example.com/.well-known/openid-configuration
+  oidc-provider-issuer:
+    default: ''
+    type: string
+    description: |
+      Open ID Connect Provider issuer identifier (e.g. https://example.com
+      ). Used when oidc-provider-metadata-url is not set or the metadata
+      obtained from that URL does not set it.
+  oidc-provider-auth-endpoint:
+    default: ''
+    type: string
+    description: |
+      Open ID Connect Provider authorization endpoint
+      (e.g. https://example.com/as/authorization.oauth2). Used when
+      oidc-provider-metadata-url is not set or the metadata obtained from that
+      URL does not set it.
+  oidc-provider-token-endpoint:
+    default: ''
+    type: string
+    description: |
+      Open ID Connect Provider token endpoint
+      (e.g. https://example.com/as/token.oauth2). Used when
+      oidc-provider-metadata-url is not set or the metadata obtained from that
+      URL does not set it.
+  oidc-provider-token-endpoint-auth:
+    default: ''
+    type: string
+    description: |
+      Authentication method for the Open ID Connect Provider token endpoint,
+      possible options are: client_secret_basic, client_secret_post,
+      client_secret_jwt, private_key_jwt or none. Used when
+      oidc-provider-metadata-url is not set or the metadata obtained from that
+      URL does not set it.
+  oidc-provider-user-info-endpoint:
+    default: ''
+    type: string
+    description: |
+      Open ID Connect Provider user info endpoint
+      (e.g. https://example.com/idp/userinfo.openid). Used when
+      oidc-provider-metadata-url is not set or the metadata obtained from that
+      URL does not set it.
