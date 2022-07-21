@@ -20,6 +20,7 @@ import subprocess
 
 from typing import List
 
+from ops.main import main
 from ops.model import StatusBase
 
 import ops.model
@@ -27,10 +28,8 @@ import ops_openstack.core
 
 from ops_openstack.adapters import (
     ConfigurationAdapter,
-    OpenStackOperRelationAdapter,
 )
 from charmhelpers.contrib.openstack import templating as os_templating
-from charmhelpers.core import hookenv
 from charmhelpers.core import host as ch_host
 from charmhelpers.core import templating
 

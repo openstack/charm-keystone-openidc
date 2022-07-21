@@ -14,6 +14,7 @@ import charm
 
 WELL_KNOWN_URL = 'https://example.com/.well-known/openid-configuration'
 
+
 class TestCharm(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(charm.KeystoneOpenIDCCharm)
