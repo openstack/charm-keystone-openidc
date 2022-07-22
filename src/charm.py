@@ -19,6 +19,7 @@ import os
 import subprocess
 
 from typing import List
+from uuid import uuid4
 
 from ops.main import main
 from ops.model import StatusBase
@@ -38,7 +39,16 @@ logger = logging.getLogger(__name__)
 CONFIG_DIR = '/etc/apache2/openidc'
 
 
+class KeyStoneOpenIDCError(Exception):
+    pass
+
+
 class KeystoneOpenIDCOptions(ConfigurationAdapter):
+
+    def __init__(self, charm_instance):
+        self.charm_instance = charm_instance
+        super().__init__(charm_instance)
+
     @property
     def openidc_location_config(self):
         service_name = self.charm_instance.unit.app.name
@@ -50,6 +60,36 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         service_name = self.charm_instance.unit.app.name
         return (f'/v3/OS-FEDERATION/identity_providers/{service_name}'
                 f'/protocols/openid/auth')
+
+    @property
+    def oidc_crypto_passphrase(self):
+
+        data = None
+        for relation in self.charm_instance.framework.model.relations.get(
+                'keystone-fid-service-provider'):
+            data = relation.data[self.charm_instance.unit.app]
+            break
+
+        if not data:
+            raise KeyStoneOpenIDCError('data bag on relation '
+                                       'keystone-fid-service-provider '
+                                       'not found')
+
+        client_secret = data.get('oidc-client-secret')
+        if client_secret:
+            logger.debug('Using oidc-client-secret from app data base')
+            return client_secret
+        elif self.charm_instance.unit.is_leader():
+            # we need to set the client secret since we are the leader and the
+            # secret hasn't been set.
+            logger.info('Generating oidc-client-secret')
+            client_secret = str(uuid4())
+            data.update({'oidc-client-secret': client_secret})
+            return client_secret
+        else:
+            logger.debug('The oidc-client-secret has not been set, '
+                         'and I am a follower')
+            return None
 
 
 class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
@@ -75,7 +115,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     def _on_config_changed(self, _):
         for relation in self.framework.model.relations.get(
                 'keystone-fid-service-provider'):
-            self.set_relation_data(relation.data[self.unit])
+            self.set_principal_unit_relation_data(relation.data[self.unit])
 
         self.render_config()
 
