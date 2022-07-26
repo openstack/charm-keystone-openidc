@@ -153,6 +153,22 @@ applications:
     charm: ../../keystone-openidc.charm
     num_units: 0
 
+  keystone-hacluster:
+    charm: ch:hacluster
+    num_units: 0
+    options:
+      corosync_transport: unicast
+      cluster_count: 3
+    channel: latest/edge
+
+  openstack-dashboard-hacluster:
+    charm: ch:hacluster
+    num_units: 0
+    options:
+      corosync_transport: unicast
+      cluster_count: 3
+    channel: latest/edge
+
 relations:
 
   - - 'nova-compute:amqp'
@@ -302,3 +318,8 @@ relations:
     - "placement-mysql-router:shared-db"
   - - "placement-mysql-router:db-router"
     - "mysql-innodb-cluster:db-router"
+
+  - - "keystone:ha"
+    - "keystone-hacluster:ha"
+  - - "openstack-dashboard:ha"
+    - "openstack-dashboard-hacluster:ha"
