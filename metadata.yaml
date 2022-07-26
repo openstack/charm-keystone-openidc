@@ -29,3 +29,6 @@ requires:
   container:
     interface: juju-info
     scope: container
+peers:
+  cluster:
+    interface: cluster
