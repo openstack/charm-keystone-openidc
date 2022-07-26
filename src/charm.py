@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
 import subprocess
@@ -22,7 +23,7 @@ from typing import List
 from uuid import uuid4
 
 from ops.main import main
-from ops.model import StatusBase
+from ops.model import StatusBase, ActiveStatus
 
 import ops.model
 import ops_openstack.core
@@ -49,26 +50,62 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         self.charm_instance = charm_instance
         super().__init__(charm_instance)
 
-    @property
-    def openidc_location_config(self):
-        service_name = self.charm_instance.unit.app.name
-        return os.path.join(self.charm_instance.config_dir,
-                            f'openidc-location.{service_name}.conf')
+    def _get_principal_data(self):
+        relation = self.charm_instance.model.get_relation(
+            'keystone-fid-service-provider')
+        if len(relation.units) > 0:
+            return relation.data[list(relation.units)[0]]
+        else:
+            logger.debug('There are no related units via '
+                         'keystone-fid-service-provider')
+            return None
 
     @property
-    def oidc_auth_path(self):
+    def hostname(self) -> str:
+        """Hostname as advertised by the principal charm"""
+        data = self._get_principal_data()
+        if data:
+            return json.loads(data['hostname'])
+        else:
+            logger.debug('There are no related units via '
+                         'keystone-fid-service-provider')
+            return None
+
+    @property
+    def openidc_location_config(self) -> str:
+        return os.path.join(self.charm_instance.config_dir,
+                            f'openidc-location.{self.idp_id}.conf')
+
+    @property
+    def oidc_auth_path(self) -> str:
         service_name = self.charm_instance.unit.app.name
         return (f'/v3/OS-FEDERATION/identity_providers/{service_name}'
                 f'/protocols/openid/auth')
 
     @property
-    def oidc_crypto_passphrase(self):
+    def idp_id(self) -> str:
+        return self.charm_instance.unit.app.name
+
+    @property
+    def scheme(self) -> str:
+        data = self._get_principal_data()
+        if not data:
+            return None
+
+        tls_enabled = json.loads(data['tls-enabled'])
+        return 'https' if tls_enabled else 'http'
+
+    @property
+    def port(self) -> int:
+        data = self._get_principal_data()
+        return json.loads(data['port'])
+
+    @property
+    def oidc_crypto_passphrase(self) -> str:
 
         data = None
-        for relation in self.charm_instance.framework.model.relations.get(
-                'keystone-fid-service-provider'):
-            data = relation.data[self.charm_instance.unit.app]
-            break
+        relation = self.charm_instance.model.get_relation('cluster')
+        data = relation.data[self.charm_instance.unit.app]
 
         if not data:
             raise KeyStoneOpenIDCError('data bag on relation '
@@ -79,16 +116,8 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         if client_secret:
             logger.debug('Using oidc-client-secret from app data base')
             return client_secret
-        elif self.charm_instance.unit.is_leader():
-            # we need to set the client secret since we are the leader and the
-            # secret hasn't been set.
-            logger.info('Generating oidc-client-secret')
-            client_secret = str(uuid4())
-            data.update({'oidc-client-secret': client_secret})
-            return client_secret
         else:
-            logger.debug('The oidc-client-secret has not been set, '
-                         'and I am a follower')
+            logger.warn('The oidc-client-secret has not been set')
             return None
 
 
@@ -110,21 +139,84 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         super().__init__(*args, **kwargs)
         super().register_status_check(self._check_status)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.cluster_relation_created,
+                               self._on_cluster_relation_created)
+        self.framework.observe(self.on.start, self._on_start)
         self.options = KeystoneOpenIDCOptions(self)
+        self.framework.observe(self.on.cluster_relation_changed,
+                               self._on_cluster_relation_changed)
 
-    def _on_config_changed(self, _):
+    # Event handlers
+
+    # Extending the default handler for install hook to enable the apache2
+    # openidc module.
+    def on_install(self, _):
+        super().on_install()
+        self.enable_module()
+
+    def _on_start(self, _):
+        self._stored.is_started = True
+
+    def _on_config_changed(self, event):
+        self._stored.is_started = True
+        if not self.is_data_ready():
+            logger.debug(f'relation data is not ready yet, deferring {event}')
+            event.defer()
+            return
+
         for relation in self.framework.model.relations.get(
                 'keystone-fid-service-provider'):
             self.set_principal_unit_relation_data(relation.data[self.unit])
 
-        self.render_config()
+        with ch_host.restart_on_change(
+                self.restart_map,
+                restart_functions=self.restart_functions):
+            self.render_config()
+
+    def _on_cluster_relation_created(self, _):
+
+        if self.unit.is_leader():
+            # we need to set the client secret since we are the leader and the
+            # secret hasn't been set.
+            data = None
+            relations = self.framework.model.relations.get(
+                'cluster')
+            for relation in relations:
+                data = relation.data[self.unit.app]
+                break
+            logger.info('Generating oidc-client-secret')
+            client_secret = str(uuid4())
+            data.update({'oidc-client-secret': client_secret})
+        else:
+            logger.debug('Not leader, skipping oidc-client-secret generation')
+
+    def _on_cluster_relation_changed(self, _):
+        self._on_config_changed(_)
+
+    # properties
+    @property
+    def restart_map(self):
+        return {self.options.openidc_location_config: ['apache2']}
+
+    @property
+    def restart_functions(self):
+        return {'apache2': self.request_restart}
+
+    def is_data_ready(self):
+        options = KeystoneOpenIDCOptions(self)
+        required_keys = ['oidc_crypto_passphrase']
+        for key in required_keys:
+            if getattr(options, key) == None:  # noqa: E711
+                return False
+
+        return True
 
     def services(self) -> List[str]:
         """Determine the list of services that should be running."""
         return []
 
     def _check_status(self) -> StatusBase:
-        pass
+        return ActiveStatus('ready')
 
     def enable_module(self):
         logger.info(f'Enabling apache2 module: {self.APACHE2_MODULE}')
@@ -139,6 +231,12 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             relation_data_to_be_set: ops.model.RelationData,
     ):
         pass
+
+    def request_restart(self):
+        """Request a restart of the service to the principal."""
+        relation = self.model.get_relation('keystone-fid-service-provider')
+        data = relation.data[self.unit]
+        data['restart-nonce']
 
     def render_config(self):
         """Render Service Provider configuration files to be used by Apache."""
@@ -163,4 +261,4 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
 
 if __name__ == "__main__":
-    main(ops_openstack.core.get_charm_class_for_release())
+    main(KeystoneOpenIDCCharm)
