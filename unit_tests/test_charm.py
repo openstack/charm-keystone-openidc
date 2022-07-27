@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import tempfile
@@ -13,6 +14,7 @@ sys.path.append('src')  # noqa
 import charm
 
 
+logger = logging.getLogger(__name__)
 WELL_KNOWN_URL = 'https://example.com/.well-known/openid-configuration'
 
 
@@ -24,6 +26,9 @@ class TestCharm(unittest.TestCase):
               keystone-fid-service-provider:
                 interface: keystone-fid-service-provider
                 scope: container
+            peers:
+              cluster:
+                interface: cluster
         ''')
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
@@ -37,11 +42,28 @@ class TestCharm(unittest.TestCase):
     def test_render_config_leader(self, chown, fchown, uuid4):
         client_secret = uuid.UUID('1e19bb8a-a92d-4377-8226-5e8fc475822c')
         uuid4.return_value = client_secret
+
+        # disable hooks to avoid trigger them implicitly while the relations
+        # are being setup and the mocks are not in place yet.
+        self.harness.disable_hooks()
+
+        # configure relation keystone <-> keystone-openidc
         rid = self.harness.add_relation('keystone-fid-service-provider',
                                         'keystone')
-        self.harness.update_relation_data(rid,
-                                          self.harness.charm.unit.app.name,
-                                          {'foo': 'bar'})
+        self.harness.add_relation_unit(rid, 'keystone/0')
+        self.harness.update_relation_data(rid, 'keystone/0',
+                                          {'port': '5000',
+                                           'tls-enabled': 'true',
+                                           'hostname': '"10.5.250.250"'})
+
+        # configure peer relation for keystone-openidc
+        logger.debug(f'Adding cluster relation for '
+                     f'{self.harness.charm.unit.app.name}')
+        rid = self.harness.add_relation('cluster',
+                                        self.harness.charm.unit.app.name)
+        self.harness.update_relation_data(
+            rid, self.harness.charm.unit.app.name,
+            {'oidc-client-secret': str(client_secret)})
         self.harness.set_leader(True)
         with tempfile.TemporaryDirectory() as tmpdir:
             with mock.patch("charm.KeystoneOpenIDCCharm.config_dir",
