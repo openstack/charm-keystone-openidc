@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 CONFIG_DIR = '/etc/apache2/openidc'
 
 
-class KeyStoneOpenIDCError(Exception):
+class KeystoneOpenIDCError(Exception):
     pass
 
 
@@ -108,9 +108,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         data = relation.data[self.charm_instance.unit.app]
 
         if not data:
-            raise KeyStoneOpenIDCError('data bag on relation '
-                                       'keystone-fid-service-provider '
-                                       'not found')
+            raise KeystoneOpenIDCError('data bag on peer relation not found')
 
         client_secret = data.get('oidc-client-secret')
         if client_secret:
