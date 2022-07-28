@@ -181,10 +181,6 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             event.defer()
             return
 
-        for relation in self.framework.model.relations.get(
-                'keystone-fid-service-provider'):
-            self.set_principal_unit_relation_data(relation.data[self.unit])
-
         with ch_host.restart_on_change(
                 self.restart_map,
                 restart_functions=self.restart_functions):
@@ -242,12 +238,6 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     def disable_module(self):
         logger.info(f'Disabling apache2 module: {self.APACHE2_MODULE}')
         subprocess.check_call(['a2dismod', self.APACHE2_MODULE])
-
-    def set_principal_unit_relation_data(
-            self,
-            relation_data_to_be_set: ops.model.RelationData,
-    ):
-        pass
 
     def request_restart(self):
         """Request a restart of the service to the principal."""
