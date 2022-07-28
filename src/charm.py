@@ -89,16 +89,19 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
     @property
     def scheme(self) -> str:
         data = self._get_principal_data()
-        if not data:
+        try:
+            tls_enabled = json.loads(data['tls-enabled'])
+            return 'https' if tls_enabled else 'http'
+        except (TypeError, KeyError):
             return None
-
-        tls_enabled = json.loads(data['tls-enabled'])
-        return 'https' if tls_enabled else 'http'
 
     @property
     def port(self) -> int:
         data = self._get_principal_data()
-        return json.loads(data['port'])
+        try:
+            return json.loads(data['port'])
+        except (TypeError, KeyError):
+            return None
 
     @property
     def oidc_crypto_passphrase(self) -> str:
