@@ -136,6 +136,8 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     release = 'xena'  # First release supported.
 
+    protocol_name = 'openidc'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         super().register_status_check(self._check_status)
@@ -146,17 +148,31 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         self.options = KeystoneOpenIDCOptions(self)
         self.framework.observe(self.on.cluster_relation_changed,
                                self._on_cluster_relation_changed)
+        self.framework.observe(
+            self.on.keystone_fid_service_provider_relation_created,
+            self._on_keystone_fid_service_provider_relation_created
+        )
 
     # Event handlers
 
     # Extending the default handler for install hook to enable the apache2
     # openidc module.
     def on_install(self, _):
-        super().on_install()
+        super().on_install(_)
         self.enable_module()
 
     def _on_start(self, _):
         self._stored.is_started = True
+
+    def _on_keystone_fid_service_provider_relation_created(self, event):
+
+        if not self.is_data_ready():
+            event.defer()
+
+        relation = self.model.get_relation('keystone-fid-service-provider')
+        data = relation.data[self.unit]
+
+        data['protocol-name'] = json.dumps(self.protocol_name)
 
     def _on_config_changed(self, event):
         self._stored.is_started = True
