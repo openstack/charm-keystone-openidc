@@ -1,3 +1,7 @@
 /venv
 *.py[cod]
 *.charm
+.tox/
+.coverage
+__pycache__/
+.stestr
