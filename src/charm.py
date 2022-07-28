@@ -23,9 +23,8 @@ from typing import List
 from uuid import uuid4
 
 from ops.main import main
-from ops.model import StatusBase, ActiveStatus
+from ops.model import StatusBase, ActiveStatus, BlockedStatus
 
-import ops.model
 import ops_openstack.core
 
 from ops_openstack.adapters import (
@@ -216,8 +215,11 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         return {'apache2': self.request_restart}
 
     def is_data_ready(self):
+        if not self.model.get_relation('cluster'):
+            return False
+
         options = KeystoneOpenIDCOptions(self)
-        required_keys = ['oidc_crypto_passphrase']
+        required_keys = ['oidc_crypto_passphrase', 'oidc_client_id']
         for key in required_keys:
             if getattr(options, key) == None:  # noqa: E711
                 return False

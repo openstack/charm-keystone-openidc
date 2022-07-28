@@ -1,4 +1,9 @@
 options:
+  oidc-client-id:
+    default: ''
+    type: string
+    description: |
+      Client identifier.
   oidc-provider-metadata-url:
     default: ''
     type: string
