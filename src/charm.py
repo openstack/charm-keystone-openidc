@@ -229,7 +229,10 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         return []
 
     def _check_status(self) -> StatusBase:
-        return ActiveStatus('ready')
+        if self.is_data_ready():
+            return ActiveStatus('ready')
+        else:
+            return BlockedStatus('incomplete data')
 
     def enable_module(self):
         logger.info(f'Enabling apache2 module: {self.APACHE2_MODULE}')
