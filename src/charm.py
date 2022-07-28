@@ -242,11 +242,13 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         logger.info(f'Disabling apache2 module: {self.APACHE2_MODULE}')
         subprocess.check_call(['a2dismod', self.APACHE2_MODULE])
 
-    def request_restart(self):
+    def request_restart(self, service_name=None):
         """Request a restart of the service to the principal."""
         relation = self.model.get_relation('keystone-fid-service-provider')
         data = relation.data[self.unit]
-        data['restart-nonce']
+
+        logger.debug('Requesting a restart to the principal charm')
+        data['restart-nonce'] = json.dumps(str(uuid4()))
 
     def render_config(self):
         """Render Service Provider configuration files to be used by Apache."""
