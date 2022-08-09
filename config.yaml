@@ -59,3 +59,8 @@ options:
       by applications that do not adopt the browser flow, such the OpenStack
       CLI, the auth-type must be set to auth-openidc (the default) otherwise
       to openid-connect.
+  oidc-client-secret:
+    default: ''
+    type: string
+    description: |
+      Used to authenticate with the Identity Provider.
