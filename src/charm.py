@@ -133,21 +133,38 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     release = 'xena'  # First release supported.
 
-    protocol_name = 'openidc'
+    auth_method = 'mapped'  # the driver to be used.
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         super().register_status_check(self._check_status)
+        self.options = KeystoneOpenIDCOptions(self)
+
+        # handlers
+        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.cluster_relation_created,
                                self._on_cluster_relation_created)
-        self.framework.observe(self.on.start, self._on_start)
-        self.options = KeystoneOpenIDCOptions(self)
         self.framework.observe(self.on.cluster_relation_changed,
                                self._on_cluster_relation_changed)
+        # keystone-fid-service-provider
         self.framework.observe(
-            self.on.keystone_fid_service_provider_relation_created,
-            self._on_keystone_fid_service_provider_relation_created
+            self.on.keystone_fid_service_provider_relation_joined,
+            self._on_keystone_fid_service_provider_relation_joined
+        )
+        self.framework.observe(
+            self.on.keystone_fid_service_provider_relation_changed,
+            self._on_keystone_fid_service_provider_relation_changed
+        )
+
+        # websso-fid-service-provider
+        self.framework.observe(
+            self.on.websso_fid_service_provider_relation_joined,
+            self._on_websso_fid_service_provider_relation_joined
+        )
+        self.framework.observe(
+            self.on.websso_fid_service_provider_relation_changed,
+            self._on_websso_fid_service_provider_relation_changed
         )
 
     # Event handlers
@@ -161,15 +178,30 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     def _on_start(self, _):
         self._stored.is_started = True
 
-    def _on_keystone_fid_service_provider_relation_created(self, event):
+    def _on_keystone_fid_service_provider_relation_joined(self, event):
 
         if not self.is_data_ready():
             event.defer()
 
+        self.update_principal_data()
+
+    def update_principal_data(self):
         relation = self.model.get_relation('keystone-fid-service-provider')
         data = relation.data[self.unit]
 
-        data['protocol-name'] = json.dumps(self.protocol_name)
+        data['auth-method'] = json.dumps(self.auth_method)
+        data['protocol-name'] = json.dumps(self.options.idp_id)
+        data['remote-id-attribute'] = json.dumps(
+            self.options.remote_id_attribute)
+
+    def _on_keystone_fid_service_provider_relation_changed(self, event):
+        self.update_config_if_needed()
+
+    def _on_websso_fid_service_provider_relation_joined(self, event):
+        pass
+
+    def _on_websso_fid_service_provider_relation_changed(self, event):
+        pass
 
     def _on_config_changed(self, event):
         self._stored.is_started = True
@@ -178,6 +210,10 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             event.defer()
             return
 
+        self.update_config_if_needed()
+        self.update_principal_data()
+
+    def update_config_if_needed(self):
         with ch_host.restart_on_change(
                 self.restart_map,
                 restart_functions=self.restart_functions):

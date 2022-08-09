@@ -1,4 +1,9 @@
 options:
+  remote-id-attribute:
+    default: 'HTTP_OIDC_SUB'
+    type: string
+    description: |
+      remote id attribute
   oidc-client-id:
     default: ''
     type: string
