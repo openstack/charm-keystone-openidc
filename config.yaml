@@ -69,3 +69,9 @@ options:
     type: string
     description: |
       Used to authenticate with the Identity Provider.
+  oidc-remote-user-claim:
+    default: ''
+    type: string
+    description: |
+      The claim that is used when setting the REMOTE_USER variable on OpenID
+      Connect protected paths, for example: email.
