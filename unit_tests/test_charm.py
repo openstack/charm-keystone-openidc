@@ -22,10 +22,13 @@ class TestCharm(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(charm.KeystoneOpenIDCCharm, meta='''
             name: keystone-openidc
-            requires:
+            provides:
               keystone-fid-service-provider:
                 interface: keystone-fid-service-provider
                 scope: container
+              websso-fid-service-provider:
+                interface: websso-fid-service-provider
+                scope: global
             peers:
               cluster:
                 interface: cluster
@@ -40,8 +43,8 @@ class TestCharm(unittest.TestCase):
     @mock.patch('os.fchown')
     @mock.patch('os.chown')
     def test_render_config_leader(self, chown, fchown, uuid4):
-        client_secret = uuid.UUID('1e19bb8a-a92d-4377-8226-5e8fc475822c')
-        uuid4.return_value = client_secret
+        crypto_passphrase = uuid.UUID('1e19bb8a-a92d-4377-8226-5e8fc475822c')
+        uuid4.return_value = crypto_passphrase
 
         # disable hooks to avoid trigger them implicitly while the relations
         # are being setup and the mocks are not in place yet.
@@ -63,7 +66,7 @@ class TestCharm(unittest.TestCase):
                                         self.harness.charm.unit.app.name)
         self.harness.update_relation_data(
             rid, self.harness.charm.unit.app.name,
-            {'oidc-client-secret': str(client_secret)})
+            {'oidc-crypto-passphrase': str(crypto_passphrase)})
         self.harness.set_leader(True)
         with tempfile.TemporaryDirectory() as tmpdir:
             with mock.patch("charm.KeystoneOpenIDCCharm.config_dir",
@@ -78,5 +81,7 @@ class TestCharm(unittest.TestCase):
                     content = f.read()
                     self.assertIn(f'OIDCProviderMetadataURL {WELL_KNOWN_URL}',
                                   content)
-                    self.assertIn(f'OIDCCryptoPassphrase {str(client_secret)}',
-                                  content)
+                    self.assertIn(
+                        f'OIDCCryptoPassphrase {str(crypto_passphrase)}',
+                        content
+                    )
