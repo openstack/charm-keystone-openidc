@@ -248,17 +248,21 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     def restart_functions(self):
         return {'apache2': self.request_restart}
 
-    def is_data_ready(self):
+    def is_data_ready(self) -> bool:
         if not self.model.get_relation('cluster'):
             return False
 
         options = KeystoneOpenIDCOptions(self)
-        required_keys = ['oidc_crypto_passphrase', 'oidc_client_id']
+        required_keys = ['oidc_crypto_passphrase', 'oidc_client_id',
+                         'hostname', 'port', 'scheme']
+        missing_keys = []
         for key in required_keys:
-            if getattr(options, key) == None:  # noqa: E711
-                return False
+            if getattr(options, key) in [None, '']:
+                missing_keys.append(key)
 
-        return True
+        if missing_keys:
+            logger.debug('Incomplete data: %s', ' '.join(missing_keys))
+        return len(missing_keys) == 0
 
     def services(self) -> List[str]:
         """Determine the list of services that should be running."""
