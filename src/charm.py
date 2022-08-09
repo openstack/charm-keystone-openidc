@@ -63,11 +63,9 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
     def hostname(self) -> str:
         """Hostname as advertised by the principal charm"""
         data = self._get_principal_data()
-        if data:
+        try:
             return json.loads(data['hostname'])
-        else:
-            logger.debug('There are no related units via '
-                         'keystone-fid-service-provider')
+        except (TypeError, KeyError):
             return None
 
     @property
