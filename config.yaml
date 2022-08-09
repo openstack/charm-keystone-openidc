@@ -51,3 +51,11 @@ options:
       (e.g. https://example.com/idp/userinfo.openid). Used when
       oidc-provider-metadata-url is not set or the metadata obtained from that
       URL does not set it.
+  auth-type:
+    default: 'auth-openidc'
+    type: string
+    description: |
+      To add support to Bearer Access Token authentication flow that is used
+      by applications that do not adopt the browser flow, such the OpenStack
+      CLI, the auth-type must be set to auth-openidc (the default) otherwise
+      to openid-connect.
