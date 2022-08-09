@@ -13,19 +13,32 @@ dev_bundles:
 
 configure:
 - zaza.openstack.charm_tests.vault.setup.auto_initialize
+- zaza.openstack.charm_tests.openidc.setup.relate_keystone_openidc  # LP: #1982948
 - zaza.openstack.charm_tests.keystone.setup.add_demo_user
 - zaza.openstack.charm_tests.glance.setup.add_lts_image
 - zaza.openstack.charm_tests.nova.setup.create_flavors
 - zaza.openstack.charm_tests.nova.setup.manage_ssh_key
 - zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
+- zaza.openstack.charm_tests.openidc.setup.keystone_federation_setup_site1
 
 tests:
 - zaza.openstack.charm_tests.keystone.tests.AuthenticationAuthorizationTest
 
 target_deploy_status:
+  keystone-openidc:
+    # NOTE: at first we deploy a bundle in which this subordinate charm isn't
+    # related to anything, so it has no unit. It will become related and
+    # receive units later as part of the setup stage.
+    num-expected-units: 0
+    workload-status: waiting
+  openidc-test-fixture:
+    workload-status-message-prefix: 'ready'
   vault:
     workload-status: blocked
     workload-status-message-prefix: Vault needs to be initialized
+  ntp:
+    workload-status: active
+    workload-status-message-prefix: 'chrony: Ready'
 
 tests_options:
   force_deploy: []

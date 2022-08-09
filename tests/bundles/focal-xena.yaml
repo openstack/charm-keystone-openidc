@@ -273,9 +273,6 @@ relations:
   - - 'ntp:juju-info'
     - 'neutron-gateway:juju-info'
 
-  - - 'keystone'
-    - 'keystone-openidc'
-
   - - 'vault:shared-db'
     - 'vault-mysql-router:shared-db'
   - - 'vault-mysql-router:db-router'
@@ -289,9 +286,6 @@ relations:
 
   - - 'vault:certificates'
     - 'openstack-dashboard:certificates'
-
-  - - 'openstack-dashboard'
-    - 'keystone-openidc'
 
   - - 'keystone:websso-trusted-dashboard'
     - 'openstack-dashboard:websso-trusted-dashboard'
