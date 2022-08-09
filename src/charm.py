@@ -110,12 +110,12 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         if not data:
             raise KeystoneOpenIDCError('data bag on peer relation not found')
 
-        client_secret = data.get('oidc-client-secret')
-        if client_secret:
-            logger.debug('Using oidc-client-secret from app data base')
-            return client_secret
+        crypto_passphrase = data.get('oidc-crypto-passphrase')
+        if crypto_passphrase:
+            logger.debug('Using oidc-crypto-passphrase from app databag')
+            return crypto_passphrase
         else:
-            logger.warn('The oidc-client-secret has not been set')
+            logger.warn('The oidc-crypto-passphrase has not been set')
             return None
 
 
@@ -230,7 +230,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     def _check_status(self) -> StatusBase:
         if self.is_data_ready():
-            return ActiveStatus('ready')
+            return ActiveStatus()
         else:
             return BlockedStatus('incomplete data')
 
