@@ -1,4 +1,9 @@
 options:
+  debug:
+    default: False
+    type: boolean
+    description: |
+      Enable debug logging.
   remote-id-attribute:
     default: 'HTTP_OIDC_SUB'
     type: string
