@@ -13,14 +13,19 @@ options:
     default: ''
     type: string
     description: |
-      Client identifier.
+      Client identifier used to connect to the OpenID Connect Provider.
+  oidc-client-secret:
+    default: ''
+    type: string
+    description: |
+      Password used to authenticate with the OpenID Connect Provider.
   oidc-provider-metadata-url:
     default: ''
     type: string
     description: |
-      URL to discover the OpenID Provider and obtain information needed to
-      interact with it, including its OAuth 2.0 endpoint locations. Example:
-      https://example.com/.well-known/openid-configuration
+      URL to discover the OpenID Connect Provider and obtain information
+      needed to interact with it, including its OAuth 2.0 endpoint
+      locations. Example: https://example.com/.well-known/openid-configuration
   oidc-provider-issuer:
     default: ''
     type: string
@@ -74,11 +79,6 @@ options:
     type: string
     description: |
       Federation protocol name.
-  oidc-client-secret:
-    default: ''
-    type: string
-    description: |
-      Used to authenticate with the Identity Provider.
   oidc-remote-user-claim:
     default: ''
     type: string
