@@ -5,10 +5,10 @@ options:
     description: |
       Enable debug logging.
   remote-id-attribute:
-    default: 'HTTP_OIDC_SUB'
+    default: 'HTTP_OIDC_ISS'
     type: string
     description: |
-      remote id attribute
+      Attribute used to obtain the entity ID of the OpenID Connect Provider.
   oidc-client-id:
     default: ''
     type: string
