@@ -22,10 +22,11 @@ import subprocess
 from typing import List
 from uuid import uuid4
 
+import ops_openstack.core
+import requests
+
 from ops.main import main
 from ops.model import StatusBase, ActiveStatus, BlockedStatus
-
-import ops_openstack.core
 
 from ops_openstack.adapters import (
     ConfigurationAdapter,
@@ -61,7 +62,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
 
     @property
     def hostname(self) -> str:
-        """Hostname as advertised by the principal charm"""
+        """Hostname as advertised by the principal charm."""
         data = self._get_principal_data()
         try:
             return json.loads(data['hostname'])
@@ -70,6 +71,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
 
     @property
     def openidc_location_config(self) -> str:
+        """Path to the file with the OpenID Connect configuration."""
         return os.path.join(self.charm_instance.config_dir,
                             f'openidc-location.{self.idp_id}.conf')
 
@@ -81,7 +83,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
 
     @property
     def idp_id(self) -> str:
-        return self.charm_instance.unit.app.name
+        return 'openid'
 
     @property
     def scheme(self) -> str:
@@ -115,7 +117,24 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             logger.debug('Using oidc-crypto-passphrase from app databag')
             return crypto_passphrase
         else:
-            logger.warn('The oidc-crypto-passphrase has not been set')
+            logger.warning('The oidc-crypto-passphrase has not been set')
+            return None
+
+    @property
+    def metadata(self):
+        """Metadata content offered by the Identity Provider.
+
+        The content available at the url configured in
+        oidc-provider-metadata-url is read and parsed as json.
+        """
+        if self.oidc_provider_metadata_url:
+            logging.info('GETing content from %s',
+                         self.oidc_provider_metadata_url)
+            r = requests.get(self.oidc_provider_metadata_url)
+            return r.json()
+        else:
+            logging.info('Metadata was not retrieved since '
+                         'oidc-provider-metadata-url is not set')
             return None
 
 
@@ -126,6 +145,8 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     REQUIRED_RELATIONS = ['keystone-fid-service-provider',
                           'websso-fid-service-provider']
 
+    REQUIRED_KEYS = ['oidc_crypto_passphrase', 'oidc_client_id',
+                     'hostname', 'port', 'scheme']
     APACHE2_MODULE = 'auth_openidc'
 
     CONFIG_FILE_OWNER = 'root'
@@ -133,7 +154,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     release = 'xena'  # First release supported.
 
-    auth_method = 'mapped'  # the driver to be used.
+    auth_method = 'openid'  # the driver to be used.
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -168,14 +189,22 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         )
 
     # Event handlers
-
-    # Extending the default handler for install hook to enable the apache2
-    # openidc module.
     def on_install(self, _):
+        """Install hook handler.
+
+        This event handler installs the list of packages defined in the
+        property PACKAGES and enables the openidc apache module.
+        """
         super().on_install(_)
         self.enable_module()
 
     def _on_start(self, _):
+        """Start hook handler.
+
+        Set the flag `is_started` which is consumed by the update-status
+        hook. This charm doesn't run new services, so there is no need to
+        start anything.
+        """
         self._stored.is_started = True
 
     def _on_keystone_fid_service_provider_relation_joined(self, event):
@@ -189,7 +218,9 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         relation = self.model.get_relation('keystone-fid-service-provider')
         data = relation.data[self.unit]
 
-        data['auth-method'] = json.dumps(self.auth_method)
+        # When (if) this patch is merged, we can use auth-method
+        # https://review.opendev.org/c/openstack/charm-keystone/+/852601
+        # data['auth-method'] = json.dumps(self.auth_method)
         data['protocol-name'] = json.dumps(self.options.idp_id)
         data['remote-id-attribute'] = json.dumps(
             self.options.remote_id_attribute)
@@ -230,39 +261,37 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             for relation in relations:
                 data = relation.data[self.unit.app]
                 break
-            logger.info('Generating oidc-client-secret')
-            client_secret = str(uuid4())
-            data.update({'oidc-client-secret': client_secret})
+            logger.info('Generating oidc-crypto-passphrase')
+            data.update({'oidc-crypto-passphrase': str(uuid4())})
         else:
-            logger.debug('Not leader, skipping oidc-client-secret generation')
+            logger.debug('Not leader, skipping oidc-crypto-passphrase '
+                         'generation')
 
     def _on_cluster_relation_changed(self, _):
         self._on_config_changed(_)
-
-    # properties
-    @property
-    def restart_map(self):
-        return {self.options.openidc_location_config: ['apache2']}
-
-    @property
-    def restart_functions(self):
-        return {'apache2': self.request_restart}
 
     def is_data_ready(self) -> bool:
         if not self.model.get_relation('cluster'):
             return False
 
+        return len(self.find_missing_keys()) == 0
+
+    def find_missing_keys(self) -> List[str]:
+
+        """Find keys not set that are needed for the charm to work correctly.
+
+        :returns: List of configuration keys that need to be set and are not.
+        """
         options = KeystoneOpenIDCOptions(self)
-        required_keys = ['oidc_crypto_passphrase', 'oidc_client_id',
-                         'hostname', 'port', 'scheme']
         missing_keys = []
-        for key in required_keys:
+        for key in self.REQUIRED_KEYS:
             if getattr(options, key) in [None, '']:
                 missing_keys.append(key)
 
         if missing_keys:
             logger.debug('Incomplete data: %s', ' '.join(missing_keys))
-        return len(missing_keys) == 0
+
+        return missing_keys
 
     def services(self) -> List[str]:
         """Determine the list of services that should be running."""
@@ -275,19 +304,24 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             return BlockedStatus('incomplete data')
 
     def enable_module(self):
-        logger.info(f'Enabling apache2 module: {self.APACHE2_MODULE}')
+        """Enable oidc Apache module."""
+        logger.info('Enabling apache2 module: %s', self.APACHE2_MODULE)
         subprocess.check_call(['a2enmod', self.APACHE2_MODULE])
 
     def disable_module(self):
-        logger.info(f'Disabling apache2 module: {self.APACHE2_MODULE}')
+        """Disable oidc Apache module."""
+        logger.info('Disabling apache2 module: %s', self.APACHE2_MODULE)
         subprocess.check_call(['a2dismod', self.APACHE2_MODULE])
 
     def request_restart(self, service_name=None):
-        """Request a restart of the service to the principal."""
+        """Request a restart of the service to the principal.
+
+        :param service_name: name of the service to restart, but unused.
+        """
         relation = self.model.get_relation('keystone-fid-service-provider')
         data = relation.data[self.unit]
 
-        logger.debug('Requesting a restart to the principal charm')
+        logger.info('Requesting a restart to the principal charm')
         data['restart-nonce'] = json.dumps(str(uuid4()))
 
     def render_config(self):
@@ -306,6 +340,15 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             group=self.CONFIG_FILE_GROUP,
             perms=0o440
         )
+
+    # properties
+    @property
+    def restart_map(self):
+        return {self.options.openidc_location_config: ['apache2']}
+
+    @property
+    def restart_functions(self):
+        return {'apache2': self.request_restart}
 
     @property
     def config_dir(self):

@@ -1,2 +1,3 @@
 ops>=1.5.0
 git+https://opendev.org/openstack/charm-ops-openstack@master#egg=ops_openstack
+requests
