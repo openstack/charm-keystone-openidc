@@ -39,6 +39,14 @@ target_deploy_status:
   ntp:
     workload-status: active
     workload-status-message-prefix: 'chrony: Ready'
-
+  ovn-central:
+    workload-status: waiting
+    workload-status-message-prefix: "'ovsdb-peer' incomplete, 'certificates' awaiting server certificate data"
+  ovn-chassis:
+    workload-status: waiting
+    workload-status-message-prefix: "'certificates' awaiting server certificate data"
+  neutron-api-plugin-ovn:
+    workload-status: waiting
+    workload-status-message-prefix: "'certificates' awaiting server certificate data, 'ovsdb-cms' incomplete"
 tests_options:
   force_deploy: []
