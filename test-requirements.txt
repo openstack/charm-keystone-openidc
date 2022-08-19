@@ -2,4 +2,5 @@ coverage
 flake8
 stestr
 git+https://github.com/openstack-charmers/zaza.git#egg=zaza
-git+https://github.com/openstack-charmers/zaza-openstack-tests.git#egg=zaza.openstack
+git+https://github.com/freyes/zaza-openstack-tests.git@keystone-openidc#egg=zaza.openstack
+requests-mock

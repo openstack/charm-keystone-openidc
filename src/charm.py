@@ -19,7 +19,7 @@ import logging
 import os
 import subprocess
 
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 
 import ops_openstack.core
@@ -38,10 +38,20 @@ from charmhelpers.core import templating
 
 logger = logging.getLogger(__name__)
 CONFIG_DIR = '/etc/apache2/openidc'
+HTTPS = 'https://'
 
 
 class KeystoneOpenIDCError(Exception):
     pass
+
+
+class CharmConfigError(KeystoneOpenIDCError):
+    def __init__(self, msg):
+        """Charm configuration error exception sets the unit in blocked state
+
+        :param msg: message to be set in the workload status.
+        """
+        self.msg = msg
 
 
 class KeystoneOpenIDCOptions(ConfigurationAdapter):
@@ -61,7 +71,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             return None
 
     @property
-    def hostname(self) -> str:
+    def hostname(self) -> Optional[str]:
         """Hostname as advertised by the principal charm."""
         data = self._get_principal_data()
         try:
@@ -86,7 +96,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         return 'openid'
 
     @property
-    def scheme(self) -> str:
+    def scheme(self) -> Optional[str]:
         data = self._get_principal_data()
         try:
             tls_enabled = json.loads(data['tls-enabled'])
@@ -95,7 +105,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             return None
 
     @property
-    def port(self) -> int:
+    def port(self) -> Optional[int]:
         data = self._get_principal_data()
         try:
             return json.loads(data['port'])
@@ -103,9 +113,8 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             return None
 
     @property
-    def oidc_crypto_passphrase(self) -> str:
+    def oidc_crypto_passphrase(self) -> Optional[str]:
 
-        data = None
         relation = self.charm_instance.model.get_relation('cluster')
         data = relation.data[self.charm_instance.unit.app]
 
@@ -121,7 +130,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             return None
 
     @property
-    def metadata(self):
+    def provider_metadata(self):
         """Metadata content offered by the Identity Provider.
 
         The content available at the url configured in
@@ -130,8 +139,14 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         if self.oidc_provider_metadata_url:
             logging.info('GETing content from %s',
                          self.oidc_provider_metadata_url)
-            r = requests.get(self.oidc_provider_metadata_url)
-            return r.json()
+            try:
+                r = requests.get(self.oidc_provider_metadata_url)
+                return r.json()
+            except Exception:
+                logger.exception(('Failed to GET json content from provider '
+                                  'metadata url: %s'),
+                                 self.oidc_provider_metadata_url)
+                return None
         else:
             logging.info('Metadata was not retrieved since '
                          'oidc-provider-metadata-url is not set')
@@ -209,8 +224,13 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     def _on_keystone_fid_service_provider_relation_joined(self, event):
 
-        if not self.is_data_ready():
+        try:
+            if not self.is_data_ready():
+                event.defer()
+        except CharmConfigError as ex:
+            self.unit.status = BlockedStatus(ex.msg)
             event.defer()
+            return
 
         self.update_principal_data()
 
@@ -236,9 +256,14 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     def _on_config_changed(self, event):
         self._stored.is_started = True
-        if not self.is_data_ready():
-            logger.debug(f'relation data is not ready yet, deferring {event}')
-            event.defer()
+        try:
+            if not self.is_data_ready():
+                logger.debug('relation data is not ready yet, deferring %s',
+                             event)
+                event.defer()
+                return
+        except CharmConfigError as ex:
+            self.unit.status = BlockedStatus(ex.msg)
             return
 
         self.update_config_if_needed()
@@ -281,6 +306,8 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         """Find keys not set that are needed for the charm to work correctly.
 
         :returns: List of configuration keys that need to be set and are not.
+        :raises CharmConfigError: when a configuration key is set, yet
+                                  semantically incorrect.
         """
         options = KeystoneOpenIDCOptions(self)
         missing_keys = []
@@ -288,6 +315,47 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             if getattr(options, key) in [None, '']:
                 missing_keys.append(key)
 
+        if not options.oidc_provider_metadata_url:
+            # list of configuration keys that need to be set when there is no
+            # metadata url to discover them.
+            keys = ['oidc_provider_issuer',
+                    'oidc_provider_auth_endpoint',
+                    'oidc_provider_token_endpoint',
+                    'oidc_provider_token_endpoint_auth',
+                    'oidc_provider_user_info_endpoint',
+                    'oidc_provider_jwks_uri']
+            values = map(lambda k: getattr(options, k), keys)
+            if not any(values):
+                # None of the options is configured, so we inform that metadata
+                # is missing instead of assuming the user
+                # wants to use the metadata url.
+                missing_keys.append('oidc_provider_metadata_url')
+
+            elif not all(values):
+                missing_keys += list(filter(lambda k: not getattr(options, k),
+                                            keys))
+
+        if options.enable_oauth and options.oidc_provider_metadata_url:
+            if options.oidc_oauth_verify_jwks_uri:
+                if not options.oidc_oauth_verify_jwks_uri.startswith(HTTPS):
+                    msg = ('oidc-auth-verify-jwks-uri is not set to a HTTPS '
+                           'endpoint')
+                    logger.error(msg)
+                    raise CharmConfigError(msg)
+            else:
+                if not options.oidc_oauth_introspection_endpoint:
+                    try:
+                        endpoint = options.provider_metadata.get(
+                            'introspection_endpoint')
+                        if not endpoint.startswith(HTTPS):
+                            msg = ('The introspection endpoint referenced in '
+                                   'the metadata url is not a HTTPS service, '
+                                   'which is the only kind scheme valid.')
+                            logger.error(msg)
+                            raise CharmConfigError(msg)
+                    except AttributeError:
+                        missing_keys.append(
+                            'oidc-oauth-introspection-endpoint')
         if missing_keys:
             logger.debug('Incomplete data: %s', ' '.join(missing_keys))
 
@@ -298,10 +366,19 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         return []
 
     def _check_status(self) -> StatusBase:
-        if self.is_data_ready():
-            return ActiveStatus()
-        else:
-            return BlockedStatus('incomplete data')
+        try:
+            if self.is_data_ready():
+                return ActiveStatus()
+            else:
+                missing_keys = self.find_missing_keys()
+                if missing_keys:
+                    msg = 'required keys: %s' % ', '.join(missing_keys)
+                else:
+                    msg = 'incomplete data'
+
+                return BlockedStatus(msg)
+        except CharmConfigError as ex:
+            return BlockedStatus(ex.msg)
 
     def enable_module(self):
         """Enable oidc Apache module."""
