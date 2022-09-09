@@ -1,10 +1,10 @@
 variables:
-  openstack-origin: &openstack-origin cloud:distro
+  openstack-origin: &openstack-origin distro
   data-port: &data-port to-be-set
 
 local_overlay_enabled: False
 
-series: focal
+series: jammy
 
 comment:
 - 'machines section to decide order of deployment. database sooner = faster'
@@ -15,6 +15,26 @@ machines:
     constraints: mem=3072M
   '2':
     constraints: mem=3072M
+  '3':
+  '4':
+  '5':
+  '6':
+  '7':
+  '8':
+  '9':
+  '10':
+  '11':
+  '12':
+  '13':
+  '14':
+  '15':
+  '16':
+  '17':
+  '18':
+  '19':
+  '20':
+  '21':
+    series: jammy
 
 applications:
 
@@ -61,6 +81,8 @@ applications:
       openstack-origin: *openstack-origin
       glance-api-version: 2
       block-device: None
+    to:
+      - '3'
     channel: latest/edge
 
   glance:
@@ -68,6 +90,8 @@ applications:
     num_units: 1
     options:
       openstack-origin: *openstack-origin
+    to:
+      - '4'
     channel: latest/edge
 
   keystone:
@@ -76,6 +100,10 @@ applications:
     options:
       openstack-origin: *openstack-origin
       token-provider: 'fernet'
+    to:
+      - '5'
+      - '6'
+      - '7'
     channel: latest/edge
 
   neutron-api:
@@ -86,6 +114,8 @@ applications:
       manage-neutron-plugin-legacy-mode: true
       flat-network-providers: physnet1
       neutron-security-groups: true
+    to:
+      - '8'
     channel: latest/edge
 
   nova-cloud-controller:
@@ -94,6 +124,8 @@ applications:
     options:
       openstack-origin: *openstack-origin
       network-manager: Neutron
+    to:
+      - '9'
     channel: latest/edge
 
   nova-compute:
@@ -105,6 +137,9 @@ applications:
       enable-live-migration: true
       enable-resize: true
       migration-auth-type: ssh
+    to:
+      - '10'
+      - '11'
     channel: latest/edge
 
   ntp:
@@ -116,6 +151,10 @@ applications:
     num_units: 3
     options:
       openstack-origin: *openstack-origin
+    to:
+      - '12'
+      - '13'
+      - '14'
     channel: latest/edge
 
   rabbitmq-server:
@@ -123,11 +162,15 @@ applications:
     num_units: 1
     options:
       source: *openstack-origin
+    to:
+      - '15'
     channel: latest/edge
 
   vault:
     num_units: 1
     charm: ch:vault
+    to:
+      - '16'
     channel: latest/edge
 
   placement:
@@ -135,6 +178,8 @@ applications:
     num_units: 1
     options:
       openstack-origin: *openstack-origin
+    to:
+      - '17'
     channel: latest/edge
 
   keystone-openidc:
@@ -167,14 +212,24 @@ applications:
     num_units: 3
     options:
       source: *openstack-origin
+    to:
+      - '18'
+      - '19'
+      - '20'
     channel: latest/edge
 
   ovn-chassis:
     charm: ch:ovn-chassis
-    channel: latest/stable
+    num_units: 0
+    channel: latest/edge
     options:
       ovn-bridge-mappings: physnet1:br-ex
       bridge-interface-mappings: *data-port
+
+  openidc-test-fixture:
+    charm: ch:openidc-test-fixture
+    num_units: 1
+    channel: latest/edge
 
 relations:
 
@@ -318,3 +373,12 @@ relations:
     - 'ovn-central:ovsdb'
   - - 'vault:certificates'
     - 'neutron-api-plugin-ovn:certificates'
+
+  - - 'keystone-openidc:keystone-fid-service-provider'
+    - 'keystone:keystone-fid-service-provider'
+
+  - - 'keystone-openidc:websso-fid-service-provider'
+    - 'openstack-dashboard:websso-fid-service-provider'
+
+  - - 'vault:certificates'
+    - 'openidc-test-fixture:certificates'
