@@ -13,12 +13,12 @@ dev_bundles:
 
 configure:
 - zaza.openstack.charm_tests.vault.setup.auto_initialize
-- zaza.openstack.charm_tests.openidc.setup.relate_keystone_openidc  # LP: #1982948
 - zaza.openstack.charm_tests.keystone.setup.add_demo_user
 - zaza.openstack.charm_tests.glance.setup.add_lts_image
 - zaza.openstack.charm_tests.nova.setup.create_flavors
 - zaza.openstack.charm_tests.nova.setup.manage_ssh_key
 - zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
+- zaza.openstack.charm_tests.openidc.setup.configure_keystone_openidc
 - zaza.openstack.charm_tests.openidc.setup.keystone_federation_setup_site1
 
 tests:
