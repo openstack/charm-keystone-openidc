@@ -37,6 +37,7 @@ from charmhelpers.core import templating
 
 
 logger = logging.getLogger(__name__)
+SYSTEM_CA_CERT = '/etc/ssl/certs/ca-certificates.crt'
 CONFIG_DIR = '/etc/apache2/openidc'
 HTTPS = 'https://'
 
@@ -54,6 +55,23 @@ class CharmConfigError(KeystoneOpenIDCError):
         self.msg = msg
 
 
+def when_data_ready(func):
+    """Defer the event if the data is not ready."""
+    def _wrapper(self, event):
+        try:
+            if not self.is_data_ready():
+                logger.debug('relation data is not ready yet (%s)',
+                             event)
+                return
+        except CharmConfigError as ex:
+            self.unit.status = BlockedStatus(ex.msg)
+            return
+
+        return func(self, event)
+
+    return _wrapper
+
+
 class KeystoneOpenIDCOptions(ConfigurationAdapter):
 
     def __init__(self, charm_instance):
@@ -63,7 +81,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
     def _get_principal_data(self):
         relation = self.charm_instance.model.get_relation(
             'keystone-fid-service-provider')
-        if len(relation.units) > 0:
+        if relation and len(relation.units) > 0:
             return relation.data[list(relation.units)[0]]
         else:
             logger.debug('There are no related units via '
@@ -116,10 +134,14 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
     def oidc_crypto_passphrase(self) -> Optional[str]:
 
         relation = self.charm_instance.model.get_relation('cluster')
+        if not relation:
+            return None
         data = relation.data[self.charm_instance.unit.app]
 
         if not data:
-            raise KeystoneOpenIDCError('data bag on peer relation not found')
+            logger.debug('data bag on peer relation not found, the cluster '
+                         'relation is not ready.')
+            return None
 
         crypto_passphrase = data.get('oidc-crypto-passphrase')
         if crypto_passphrase:
@@ -140,7 +162,8 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             logging.info('GETing content from %s',
                          self.oidc_provider_metadata_url)
             try:
-                r = requests.get(self.oidc_provider_metadata_url)
+                r = requests.get(self.oidc_provider_metadata_url,
+                                 verify=SYSTEM_CA_CERT)
                 return r.json()
             except Exception:
                 logger.exception(('Failed to GET json content from provider '
@@ -152,13 +175,29 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
                          'oidc-provider-metadata-url is not set')
             return None
 
+    @property
+    def oauth_introspection_endpoint(self):
+        if self.oidc_oauth_introspection_endpoint:
+            logger.debug('Using oidc_oauth_introspection_endpoint from config')
+            return self.oidc_oauth_introspection_endpoint
+
+        metadata = self.provider_metadata
+        if 'introspection_endpoint' in metadata:
+            logger.debug('Using introspection_endpoint from metadata')
+            return metadata['introspection_endpoint']
+        else:
+            logger.warning('OAuth introspection endpoint not found '
+                           'in metadata')
+            return None
+
 
 class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     PACKAGES = ['libapache2-mod-auth-openidc']
 
     REQUIRED_RELATIONS = ['keystone-fid-service-provider',
-                          'websso-fid-service-provider']
+                          'websso-fid-service-provider',
+                          'cluster']
 
     REQUIRED_KEYS = ['oidc_crypto_passphrase', 'oidc_client_id',
                      'hostname', 'port', 'scheme']
@@ -184,10 +223,6 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         self.framework.observe(self.on.cluster_relation_changed,
                                self._on_cluster_relation_changed)
         # keystone-fid-service-provider
-        self.framework.observe(
-            self.on.keystone_fid_service_provider_relation_joined,
-            self._on_keystone_fid_service_provider_relation_joined
-        )
         self.framework.observe(
             self.on.keystone_fid_service_provider_relation_changed,
             self._on_keystone_fid_service_provider_relation_changed
@@ -222,20 +257,19 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         """
         self._stored.is_started = True
 
-    def _on_keystone_fid_service_provider_relation_joined(self, event):
-
-        try:
-            if not self.is_data_ready():
-                event.defer()
-        except CharmConfigError as ex:
-            self.unit.status = BlockedStatus(ex.msg)
-            event.defer()
+    def _on_keystone_fid_service_provider_relation_changed(self, event):
+        if not self.is_data_ready():
+            logger.debug('relation data is not ready yet: %s', event)
             return
-
         self.update_principal_data()
+        self.update_config_if_needed()
 
     def update_principal_data(self):
         relation = self.model.get_relation('keystone-fid-service-provider')
+        if not relation:
+            logger.debug('There is no relation to the principal charm, '
+                         'nothing to update')
+            return
         data = relation.data[self.unit]
 
         # When (if) this patch is merged, we can use auth-method
@@ -245,27 +279,22 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         data['remote-id-attribute'] = json.dumps(
             self.options.remote_id_attribute)
 
-    def _on_keystone_fid_service_provider_relation_changed(self, event):
-        self.update_config_if_needed()
-
     def _on_websso_fid_service_provider_relation_joined(self, event):
         pass
 
     def _on_websso_fid_service_provider_relation_changed(self, event):
         pass
 
+    def _update_websso_data(self):
+        pass
+
     def _on_config_changed(self, event):
-        self._stored.is_started = True
-        try:
-            if not self.is_data_ready():
-                logger.debug('relation data is not ready yet, deferring %s',
-                             event)
-                event.defer()
-                return
-        except CharmConfigError as ex:
-            self.unit.status = BlockedStatus(ex.msg)
+        if not self.is_data_ready():
+            logger.debug('relation data is not ready yet',
+                         event)
             return
 
+        self._stored.is_started = True
         self.update_config_if_needed()
         self.update_principal_data()
 
@@ -353,7 +382,8 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
                                    'which is the only kind scheme valid.')
                             logger.error(msg)
                             raise CharmConfigError(msg)
-                    except AttributeError:
+                    except AttributeError as ex:
+                        logger.debug('%s', ex)
                         missing_keys.append(
                             'oidc-oauth-introspection-endpoint')
         if missing_keys:
