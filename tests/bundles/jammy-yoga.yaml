@@ -229,7 +229,10 @@ applications:
   openidc-test-fixture:
     charm: ch:openidc-test-fixture
     num_units: 1
+    series: jammy
     channel: latest/edge
+    to:
+      - '21'
 
 relations:
 
