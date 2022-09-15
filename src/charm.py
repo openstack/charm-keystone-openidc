@@ -60,8 +60,7 @@ def when_data_ready(func):
     def _wrapper(self, event):
         try:
             if not self.is_data_ready():
-                logger.debug('relation data is not ready yet (%s)',
-                             event)
+                logger.debug('relation data is not ready yet (%s)', event)
                 return
         except CharmConfigError as ex:
             self.unit.status = BlockedStatus(ex.msg)
@@ -259,7 +258,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     def _on_keystone_fid_service_provider_relation_changed(self, event):
         if not self.is_data_ready():
-            logger.debug('relation data is not ready yet: %s', event)
+            logger.debug('relation data is not ready yet (%s)', event)
             return
         self.update_principal_data()
         self.update_config_if_needed()
@@ -290,8 +289,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
     def _on_config_changed(self, event):
         if not self.is_data_ready():
-            logger.debug('relation data is not ready yet',
-                         event)
+            logger.debug('relation data is not ready yet (%s)', event)
             return
 
         self._stored.is_started = True

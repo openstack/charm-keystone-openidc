@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -24,6 +25,7 @@ CRYPTO_PASSPHRASE = '1e19bb8a-a92d-4377-8226-5e8fc475822c'
 
 class BaseTestCharm(unittest.TestCase):
     def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
         self.harness = Harness(charm.KeystoneOpenIDCCharm, meta='''
             name: keystone-openidc
             provides:
@@ -39,6 +41,12 @@ class BaseTestCharm(unittest.TestCase):
         ''')
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.tmpdir, ignore_errors=True)
+        except Exception as ex:
+            logger.debug(ex)
 
 
 class TestRelations(BaseTestCharm):
@@ -78,24 +86,38 @@ class TestCharm(BaseTestCharm):
     @mock.patch('os.fchown')
     @mock.patch('os.chown')
     def test_render_config_leader(self, chown, fchown):
+        opts = {
+            'oidc-provider-metadata-url': WELL_KNOWN_URL,
+            'oidc-provider-issuer': 'foo',
+            'oidc-client-id': 'keystone',
+            'oidc-client-secret': 'ubuntu11',
+        }
+
+        well_known_url_content = {
+            'introspection_endpoint': INTROSPECTION_ENDPOINT_INVALID,
+        }
         self.harness.set_leader(True)
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with mock.patch("charm.KeystoneOpenIDCCharm.config_dir",
-                            new_callable=mock.PropertyMock,
-                            return_value=tmpdir):
-                self.harness.update_config(
-                    key_values={'oidc-provider-metadata-url': WELL_KNOWN_URL})
-                self.harness.charm.render_config()
-                fpath = self.harness.charm.options.openidc_location_config
-                self.assertTrue(os.path.isfile(fpath))
-                with open(fpath) as f:
-                    content = f.read()
-                    self.assertIn(f'OIDCProviderMetadataURL {WELL_KNOWN_URL}',
-                                  content)
-                    self.assertIn(
-                        f'OIDCCryptoPassphrase {str(self.crypto_passphrase)}',
-                        content
-                    )
+        with requests_mock.Mocker() as m, \
+                 mock.patch(  # noqa: E127
+                     "charm.KeystoneOpenIDCCharm.config_dir",
+                     new_callable=mock.PropertyMock,
+                     return_value=self.tmpdir.name):
+            m.get(WELL_KNOWN_URL, json=well_known_url_content)
+            self.harness.update_config(
+                key_values=opts)
+            self.harness.charm.render_config()
+            fpath = self.harness.charm.options.openidc_location_config
+            self.assertTrue(os.path.isfile(fpath))
+            with open(fpath) as f:
+                content = f.read()
+                self.assertIn(
+                    f'OIDCProviderMetadataURL {WELL_KNOWN_URL}',
+                    content
+                )
+                self.assertIn(
+                    f'OIDCCryptoPassphrase {str(self.crypto_passphrase)}',
+                    content
+                )
 
     def test_find_missing_keys_no_metadata_url(self):
         opts = {
