@@ -55,22 +55,6 @@ class CharmConfigError(KeystoneOpenIDCError):
         self.msg = msg
 
 
-def when_data_ready(func):
-    """Defer the event if the data is not ready."""
-    def _wrapper(self, event):
-        try:
-            if not self.is_data_ready():
-                logger.debug('relation data is not ready yet (%s)', event)
-                return
-        except CharmConfigError as ex:
-            self.unit.status = BlockedStatus(ex.msg)
-            return
-
-        return func(self, event)
-
-    return _wrapper
-
-
 class KeystoneOpenIDCOptions(ConfigurationAdapter):
 
     def __init__(self, charm_instance):
@@ -81,6 +65,8 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         relation = self.charm_instance.model.get_relation(
             'keystone-fid-service-provider')
         if relation and len(relation.units) > 0:
+            logger.debug('related units via keystone-fid-service-provider: %s',
+                         relation.units)
             return relation.data[list(relation.units)[0]]
         else:
             logger.debug('There are no related units via '
@@ -94,6 +80,7 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
         try:
             return json.loads(data['hostname'])
         except (TypeError, KeyError):
+            logger.debug('keystone hostname no available yet')
             return None
 
     @property
@@ -259,7 +246,11 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     def _on_keystone_fid_service_provider_relation_changed(self, event):
         if not self.is_data_ready():
             logger.debug('relation data is not ready yet (%s)', event)
+            # force the update of the workload message to bubble up the
+            # internal state of the charm
+            self.update_status()
             return
+
         self.update_principal_data()
         self.update_config_if_needed()
 
@@ -290,6 +281,9 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     def _on_config_changed(self, event):
         if not self.is_data_ready():
             logger.debug('relation data is not ready yet (%s)', event)
+            # force the update of the workload message to bubble up the
+            # internal state of the charm
+            self.update_status()
             return
 
         self._stored.is_started = True
