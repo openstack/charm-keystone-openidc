@@ -1,37 +1,35 @@
 charm_name: keystone-openidc
 
 smoke_bundles:
-- focal-yoga
+- jammy-zed
 
 gate_bundles:
-- focal-xena
-- focal-yoga
 - jammy-yoga
+- jammy-zed
+- kinetic-zed
 
 dev_bundles:
-- jammy-yoga
+- jammy-zed
 
 configure:
 - zaza.openstack.charm_tests.vault.setup.auto_initialize
-- zaza.openstack.charm_tests.keystone.setup.add_demo_user
-- zaza.openstack.charm_tests.glance.setup.add_lts_image
-- zaza.openstack.charm_tests.nova.setup.create_flavors
-- zaza.openstack.charm_tests.nova.setup.manage_ssh_key
-- zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
 - zaza.openstack.charm_tests.openidc.setup.configure_keystone_openidc
 - zaza.openstack.charm_tests.openidc.setup.keystone_federation_setup_site1
+- zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
+- zaza.openstack.charm_tests.keystone.setup.add_demo_user
+- zaza.openstack.charm_tests.glance.setup.add_cirros_image
+- zaza.openstack.charm_tests.nova.setup.create_flavors
+- zaza.openstack.charm_tests.nova.setup.manage_ssh_key
 
 tests:
 - zaza.openstack.charm_tests.keystone.tests.AuthenticationAuthorizationTest
 
 target_deploy_status:
   keystone-openidc:
-    # NOTE: at first we deploy a bundle in which this subordinate charm isn't
-    # related to anything, so it has no unit. It will become related and
-    # receive units later as part of the setup stage.
-    num-expected-units: 0
-    workload-status: waiting
+    workload-status: blocked
+    workload-status-message-prefix: 'required keys: oidc_client_id, oidc_provider_metadata_url'
   openidc-test-fixture:
+    workload-status: active
     workload-status-message-prefix: 'ready'
   vault:
     workload-status: blocked
@@ -39,14 +37,6 @@ target_deploy_status:
   ntp:
     workload-status: active
     workload-status-message-prefix: 'chrony: Ready'
-  ovn-central:
-    workload-status: waiting
-    workload-status-message-prefix: "'ovsdb-peer' incomplete, 'certificates' awaiting server certificate data"
-  ovn-chassis:
-    workload-status: waiting
-    workload-status-message-prefix: "'certificates' awaiting server certificate data"
-  neutron-api-plugin-ovn:
-    workload-status: waiting
-    workload-status-message-prefix: "'certificates' awaiting server certificate data, 'ovsdb-cms' incomplete"
 tests_options:
-  force_deploy: []
+  force_deploy:
+    - kinetic-zed
