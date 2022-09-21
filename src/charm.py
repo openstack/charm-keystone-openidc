@@ -91,12 +91,12 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
 
     @property
     def oidc_auth_path(self) -> str:
-        service_name = self.charm_instance.unit.app.name
-        return (f'/v3/OS-FEDERATION/identity_providers/{service_name}'
+        return (f'/v3/OS-FEDERATION/identity_providers/{self.idp_id}'
                 f'/protocols/openid/auth')
 
     @property
     def idp_id(self) -> str:
+        """Identity provider name to use for URL generation."""
         return 'openid'
 
     @property
@@ -216,10 +216,6 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
 
         # websso-fid-service-provider
         self.framework.observe(
-            self.on.websso_fid_service_provider_relation_joined,
-            self._on_websso_fid_service_provider_relation_joined
-        )
-        self.framework.observe(
             self.on.websso_fid_service_provider_relation_changed,
             self._on_websso_fid_service_provider_relation_changed
         )
@@ -269,14 +265,27 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         data['remote-id-attribute'] = json.dumps(
             self.options.remote_id_attribute)
 
-    def _on_websso_fid_service_provider_relation_joined(self, event):
-        pass
-
     def _on_websso_fid_service_provider_relation_changed(self, event):
-        pass
+        self._update_websso_data()
 
     def _update_websso_data(self):
-        pass
+        """Update websso-fid-service-provider relation data.
+
+        When there is a relation established via websso-fid-service-provider
+        this handler will take care of update the relation data with the
+        information that openstack-dashboard expects to enable WebSSO
+        Federation.
+        """
+        relation = self.model.get_relation('websso-fid-service-provider')
+        if not relation:
+            logger.debug('There is not relation established via '
+                         'websso-fid-service-provider interface')
+            return
+
+        data = relation.data[self.unit]
+        data['protocol-name'] = json.dumps(self.options.idp_id)
+        data['idp-name'] = json.dumps(self.options.protocol_id)
+        data['user-facing-name'] = json.dumps(self.options.user_facing_name)
 
     def _on_config_changed(self, event):
         if not self.is_data_ready():
@@ -289,6 +298,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         self._stored.is_started = True
         self.update_config_if_needed()
         self.update_principal_data()
+        self._update_websso_data()
 
     def update_config_if_needed(self):
         with ch_host.restart_on_change(

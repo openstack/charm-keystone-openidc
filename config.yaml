@@ -108,3 +108,9 @@ options:
       OAuth 2.0 Authorization Server token introspection endpoint. When
       `enable-oauth` is set to true and this option unset (the default), the
       introspection endpoint available in the metadata will be used.
+  user-facing-name:
+    type: string
+    default: 'OpenID Connect via mapped'
+    description: |
+      A user-facing name to be used for the identity provider and protocol
+      combination. Used in the OpenStack dashboard.

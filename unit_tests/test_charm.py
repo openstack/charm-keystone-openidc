@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import shutil
@@ -177,3 +178,25 @@ class TestCharm(BaseTestCharm):
             m.get(WELL_KNOWN_URL, json=well_known_url_content)
             self.assertRaises(charm.CharmConfigError,
                               self.harness.charm.find_missing_keys)
+
+    def test_update_websso_data(self):
+        rid = self.harness.add_relation('websso-fid-service-provider',
+                                        'openstack-dashboard')
+        self.harness.add_relation_unit(rid, 'openstack-dashboard/0')
+        self.harness.charm._update_websso_data()
+        data = self.harness.get_relation_data(rid, 'keystone-openidc/0')
+        options = self.harness.charm.options
+        expected = {'protocol-name': json.dumps(options.idp_id),
+                    'idp-name': json.dumps(options.protocol_id),
+                    'user-facing-name': json.dumps(options.user_facing_name)}
+        self.assertDictEqual(data, expected)
+
+        # check that on config-changed the data is updated on the relation.
+        self.harness.update_config(key_values={'user-facing-name': 'My IdP'})
+        self.harness.charm.options = charm.KeystoneOpenIDCOptions(
+            self.harness.charm
+        )
+        self.harness.charm._update_websso_data()
+        data = self.harness.get_relation_data(rid, 'keystone-openidc/0')
+        expected['user-facing-name'] = json.dumps('My IdP')
+        self.assertDictEqual(data, expected)
