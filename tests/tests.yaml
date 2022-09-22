@@ -23,6 +23,8 @@ configure:
 
 tests:
 - zaza.openstack.charm_tests.keystone.tests.AuthenticationAuthorizationTest
+- zaza.openstack.charm_tests.openidc.tests.TestToken
+- zaza.openstack.charm_tests.openidc.tests.TestLaunchInstance
 
 target_deploy_status:
   keystone-openidc:
