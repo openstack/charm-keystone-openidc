@@ -4,12 +4,12 @@ smoke_bundles:
 - jammy-zed
 
 gate_bundles:
-- jammy-yoga
 - jammy-zed
-- kinetic-zed
 
 dev_bundles:
-- jammy-zed
+- jammy-antelope
+- kinetic-zed
+- lunar-antelope
 
 configure:
 - zaza.openstack.charm_tests.vault.setup.auto_initialize
@@ -42,3 +42,4 @@ target_deploy_status:
 tests_options:
   force_deploy:
     - kinetic-zed
+    - lunar-antelope
