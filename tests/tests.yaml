@@ -8,7 +8,6 @@ gate_bundles:
 
 dev_bundles:
 - jammy-antelope
-- kinetic-zed
 - lunar-antelope
 
 configure:
@@ -41,5 +40,4 @@ target_deploy_status:
     workload-status-message-prefix: 'chrony: Ready'
 tests_options:
   force_deploy:
-    - kinetic-zed
     - lunar-antelope
