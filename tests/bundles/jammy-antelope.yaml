@@ -1,7 +1,7 @@
 variables:
   openstack-origin: &openstack-origin cloud:jammy-antelope
 
-local_overlay_enabled: False
+local_overlay_enabled: True
 
 series: jammy
 
