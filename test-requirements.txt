@@ -1,6 +1,0 @@
-coverage
-flake8
-stestr
-git+https://github.com/openstack-charmers/zaza.git#egg=zaza
-git+https://github.com/openstack-charmers/zaza-openstack-tests.git#egg=zaza.openstack
-requests-mock

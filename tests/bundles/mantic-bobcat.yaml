@@ -41,28 +41,28 @@ applications:
 
   keystone-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   neutron-api-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   glance-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   openstack-dashboard-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   nova-cloud-controller-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   cinder-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   vault-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
   placement-mysql-router:
     charm: ch:mysql-router
-    channel: latest/edge
+    channel: 8.0/edge
 
   mysql-innodb-cluster:
     charm: ch:mysql-innodb-cluster
@@ -73,7 +73,7 @@ applications:
       - '0'
       - '1'
       - '2'
-    channel: latest/edge
+    channel: 8.0/edge
 
   cinder:
     num_units: 1
@@ -84,7 +84,7 @@ applications:
       block-device: None
     to:
       - '3'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   glance:
     charm: ch:glance
@@ -93,7 +93,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '4'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   keystone:
     charm: ch:keystone
@@ -105,7 +105,7 @@ applications:
       - '5'
       - '6'
       - '7'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   neutron-api:
     charm: ch:neutron-api
@@ -117,7 +117,7 @@ applications:
       neutron-security-groups: true
     to:
       - '8'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
@@ -127,7 +127,7 @@ applications:
       network-manager: Neutron
     to:
       - '9'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   nova-compute:
     charm: ch:nova-compute
@@ -141,7 +141,7 @@ applications:
     to:
       - '10'
       - '11'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   ntp:
     charm: ch:ntp
@@ -156,21 +156,21 @@ applications:
       - '12'
       - '13'
       - '14'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   rabbitmq-server:
     charm: ch:rabbitmq-server
     num_units: 1
     to:
       - '15'
-    channel: latest/edge
+    channel: 3.9/edge
 
   vault:
     num_units: 1
     charm: ch:vault
     to:
       - '16'
-    channel: latest/edge
+    channel: 1.8/edge
 
   placement:
     charm: ch:placement
@@ -179,7 +179,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '17'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   keystone-openidc:
     charm: ../../keystone-openidc.charm
@@ -191,7 +191,7 @@ applications:
     options:
       corosync_transport: unicast
       cluster_count: 3
-    channel: latest/edge
+    channel: 2.4/edge
 
   openstack-dashboard-hacluster:
     charm: ch:hacluster
@@ -199,7 +199,7 @@ applications:
     options:
       corosync_transport: unicast
       cluster_count: 3
-    channel: latest/edge
+    channel: 2.4/edge
 
   neutron-gateway:
     charm: ch:neutron-gateway
@@ -209,11 +209,11 @@ applications:
       bridge-mappings: physnet1:br-ex
     to:
       - '18'
-    channel: latest/edge
+    channel: 2023.2/edge
 
   neutron-openvswitch:
     charm: ch:neutron-openvswitch
-    channel: latest/edge
+    channel: 2023.2/edge
 
   openidc-test-fixture:
     charm: ch:openidc-test-fixture
