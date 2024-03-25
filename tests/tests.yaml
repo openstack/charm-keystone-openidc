@@ -1,30 +1,27 @@
 charm_name: keystone-openidc
 
 smoke_bundles:
-- jammy-antelope
-
+  - jammy-caracal
 gate_bundles:
-- jammy-antelope
-
+  - jammy-antelope
+  - jammy-bobcat
+  - jammy-caracal
 dev_bundles:
-- jammy-bobcat
-- lunar-antelope
-- mantic-bobcat
-
+  - noble-caracal
 configure:
-- zaza.openstack.charm_tests.vault.setup.auto_initialize
-- zaza.openstack.charm_tests.openidc.setup.configure_keystone_openidc
-- zaza.openstack.charm_tests.openidc.setup.keystone_federation_setup_site1
-- zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
-- zaza.openstack.charm_tests.keystone.setup.add_demo_user
-- zaza.openstack.charm_tests.glance.setup.add_cirros_image
-- zaza.openstack.charm_tests.nova.setup.create_flavors
-- zaza.openstack.charm_tests.nova.setup.manage_ssh_key
+  - zaza.openstack.charm_tests.vault.setup.auto_initialize
+  - zaza.openstack.charm_tests.openidc.setup.configure_keystone_openidc
+  - zaza.openstack.charm_tests.openidc.setup.keystone_federation_setup_site1
+  - zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
+  - zaza.openstack.charm_tests.keystone.setup.add_demo_user
+  - zaza.openstack.charm_tests.glance.setup.add_cirros_image
+  - zaza.openstack.charm_tests.nova.setup.create_flavors
+  - zaza.openstack.charm_tests.nova.setup.manage_ssh_key
 
 tests:
-- zaza.openstack.charm_tests.keystone.tests.AuthenticationAuthorizationTest
-- zaza.openstack.charm_tests.openidc.tests.TestToken
-- zaza.openstack.charm_tests.openidc.tests.TestLaunchInstance
+  - zaza.openstack.charm_tests.keystone.tests.AuthenticationAuthorizationTest
+  - zaza.openstack.charm_tests.openidc.tests.TestToken
+  - zaza.openstack.charm_tests.openidc.tests.TestLaunchInstance
 
 target_deploy_status:
   keystone-openidc:
@@ -41,5 +38,4 @@ target_deploy_status:
     workload-status-message-prefix: 'chrony: Ready'
 tests_options:
   force_deploy:
-    - lunar-antelope
-    - mantic-bobcat
+    - noble-caracal

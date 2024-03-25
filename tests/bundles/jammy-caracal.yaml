@@ -1,9 +1,9 @@
 variables:
-  openstack-origin: &openstack-origin distro
+  openstack-origin: &openstack-origin cloud:jammy-caracal
 
 local_overlay_enabled: True
 
-series: mantic
+series: jammy
 
 comment:
 - 'machines section to decide order of deployment. database sooner = faster'
@@ -84,7 +84,7 @@ applications:
       block-device: None
     to:
       - '3'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   glance:
     charm: ch:glance
@@ -93,7 +93,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '4'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   keystone:
     charm: ch:keystone
@@ -105,7 +105,7 @@ applications:
       - '5'
       - '6'
       - '7'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   neutron-api:
     charm: ch:neutron-api
@@ -117,7 +117,7 @@ applications:
       neutron-security-groups: true
     to:
       - '8'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
@@ -127,7 +127,7 @@ applications:
       network-manager: Neutron
     to:
       - '9'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   nova-compute:
     charm: ch:nova-compute
@@ -141,7 +141,7 @@ applications:
     to:
       - '10'
       - '11'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   ntp:
     charm: ch:ntp
@@ -156,7 +156,7 @@ applications:
       - '12'
       - '13'
       - '14'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   rabbitmq-server:
     charm: ch:rabbitmq-server
@@ -179,7 +179,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '17'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   keystone-openidc:
     charm: ../../keystone-openidc.charm
@@ -209,11 +209,11 @@ applications:
       bridge-mappings: physnet1:br-ex
     to:
       - '18'
-    channel: latest/edge
+    channel: 2024.1/edge
 
   neutron-openvswitch:
     charm: ch:neutron-openvswitch
-    channel: latest/edge
+    channel: 2024.1/edge
 
   openidc-test-fixture:
     charm: ch:openidc-test-fixture
