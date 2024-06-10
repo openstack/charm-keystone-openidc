@@ -34,6 +34,11 @@ Join keystone-openidc to openstack-dashboard to provide SSO access through Horiz
 
     juju add-relation openstack-dashboard:websso-fid-service-provider keystone-openidc:websso-fid-service-provider
 
+Enable Horizon as a trusted dashboard for Web Single Single-On for Keystone:
+
+    juju add-relation openstack-dashboard:websso-trusted-dashboard keystone:websso-trusted-dashboard
+
+**You must add this relation for Horizon and Keystone. If you do not, Keystone will return a 401 error that the login domain for Horizon is not a trusted domain.**
 
 Now provide an OpenID Connect client credentials and the URL for autodiscovery
 of the backend's configuration:
