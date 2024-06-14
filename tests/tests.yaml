@@ -27,7 +27,7 @@ tests:
 target_deploy_status:
   keystone-openidc:
     workload-status: blocked
-    workload-status-message-prefix: 'required keys: oidc_client_id, oidc_provider_metadata_url'
+    workload-status-message-prefix: 'required keys: oidc_client_id, idp_id, oidc_provider_metadata_url'
   openidc-test-fixture:
     workload-status: active
     workload-status-message-prefix: 'ready'
