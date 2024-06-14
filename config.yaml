@@ -66,6 +66,34 @@ options:
       (e.g. https://example.com/idp/userinfo.openid). Used when
       oidc-provider-metadata-url is not set or the metadata obtained from that
       URL does not set it.
+  oidc-x-forwarded-headers:
+    default: ''
+    type: string
+    description: |
+      X-Forwarded-* headers from reverse proxies that mod_auth_openidc should
+      look for. Must be one or more of "X-Forwarded-Host", "X-Forwarded-Port",
+      "X-Forwarded-Proto", "Forwarded", or "none". mod_auth_openidc ignores
+      this setting if it is "none" or undefined. Use this setting when using
+      a proxy that changes the protocol, host, or port when handling the
+      authentication workflow.
+  oidc-state-input-headers:
+    default: 'user-agent'
+    type: string
+    description: |
+      Define the headers mod_auth_openidc uses to calculate the browser
+      fingerprint during authentication. Set to "none" if using multiple
+      units of Keystone behind a load balancer or proxy.
+  oidc-session-type:
+    default: 'server-cache'
+    type: string
+    description: |
+      Set where OpenID Connect session cookies are stored. BY default cookies
+      are stored on the web server. Can be one of 'server-cache',
+      'server-cache:persistent', 'client-cookie', 'client-cookie:persistent',
+      'client-cookie:store_id_token', or
+      'client-cookie:persistent:store_id_token'. When using multiple units
+      of Keystone behind a proxy, use 'client-cookie:persistent' if you are
+      not using shared session storage for Keystone.
   auth-type:
     default: 'auth-openidc'
     type: string
@@ -74,6 +102,11 @@ options:
       by applications that do not adopt the browser flow, such the OpenStack
       CLI, the auth-type must be set to auth-openidc (the default) otherwise
       to openid-connect.
+  idp_id:
+    default: ''
+    type: string
+    description: |
+      The ID of the Identity Provider defined in Keystone.
   protocol_id:
     default: 'openid'
     type: string
