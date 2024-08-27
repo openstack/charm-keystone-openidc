@@ -16,7 +16,6 @@ tags:
   - federation
   - openidc
 series:
-  - focal
   - jammy
 provides:
   keystone-fid-service-provider:

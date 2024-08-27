@@ -35,7 +35,7 @@ machines:
   '17':
   '18':
   '19':
-     series: jammy
+     series: noble
 
 applications:
 
@@ -84,7 +84,7 @@ applications:
       block-device: None
     to:
       - '3'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   glance:
     charm: ch:glance
@@ -93,7 +93,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '4'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   keystone:
     charm: ch:keystone
@@ -105,7 +105,7 @@ applications:
       - '5'
       - '6'
       - '7'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   neutron-api:
     charm: ch:neutron-api
@@ -117,7 +117,7 @@ applications:
       neutron-security-groups: true
     to:
       - '8'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   nova-cloud-controller:
     charm: ch:nova-cloud-controller
@@ -127,7 +127,7 @@ applications:
       network-manager: Neutron
     to:
       - '9'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   nova-compute:
     charm: ch:nova-compute
@@ -141,7 +141,7 @@ applications:
     to:
       - '10'
       - '11'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   ntp:
     charm: ch:ntp
@@ -156,7 +156,7 @@ applications:
       - '12'
       - '13'
       - '14'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   rabbitmq-server:
     charm: ch:rabbitmq-server
@@ -179,7 +179,7 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '17'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   keystone-openidc:
     charm: ../../keystone-openidc.charm
@@ -209,16 +209,16 @@ applications:
       bridge-mappings: physnet1:br-ex
     to:
       - '18'
-    channel: 2024.1/edge
+    channel: latest/edge
 
   neutron-openvswitch:
     charm: ch:neutron-openvswitch
-    channel: 2024.1/edge
+    channel: latest/edge
 
   openidc-test-fixture:
     charm: ch:openidc-test-fixture
     num_units: 1
-    series: jammy
+    series: noble
     channel: latest/edge
     to:
       - '19'

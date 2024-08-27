@@ -95,7 +95,7 @@ export OS_PROTOCOL=openid
 the keystone-openidc git repo:
 
   tox -e build
-  tox -e func-target -- jammy-yoga --keep-model
+  tox -e func-target -- noble-caracal --keep-model
 -->
 
 # Bugs
