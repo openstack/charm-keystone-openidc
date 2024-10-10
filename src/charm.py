@@ -187,6 +187,15 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
     CONFIG_FILE_OWNER = 'root'
     CONFIG_FILE_GROUP = 'www-data'
 
+    OIDCRESPONSETYPE_VALUES = (
+        'code',
+        'id_token',
+        'id_token token',
+        'code id_token',
+        'code token',
+        'code id_token token'
+    )
+
     release = 'xena'  # First release supported.
 
     auth_method = 'openid'  # the driver to be used.
@@ -282,6 +291,24 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         data['idp-name'] = json.dumps(self.options.idp_id)
         data['user-facing-name'] = json.dumps(self.options.user_facing_name)
 
+    def _check_oidcresponsetype(self):
+        """Make sure that the OIDCResponseType got correct value
+
+        As in description the allowed values are:
+        code|id_token|id_token token|code id_token|
+        code token|code id_token token
+        Otherwise raise CharmConfigError
+        """
+        options = KeystoneOpenIDCOptions(self)
+        if options.oidc_response_type not in self.OIDCRESPONSETYPE_VALUES:
+            valid_values = '|'.join(self.OIDCRESPONSETYPE_VALUES)
+            msg = (
+                f"Incorrect oidc-response-type:{options.oidc_response_type}.",
+                f"Should be one of the following: {valid_values}."
+            )
+            logger.error(msg)
+            raise CharmConfigError(msg)
+
     def _on_config_changed(self, event):
         if not self.is_data_ready():
             logger.debug('relation data is not ready yet (%s)', event)
@@ -294,6 +321,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         self.update_config_if_needed()
         self.update_principal_data()
         self._update_websso_data()
+        self._check_oidcresponsetype()
 
     def update_config_if_needed(self):
         with ch_host.restart_on_change(
