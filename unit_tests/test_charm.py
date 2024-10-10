@@ -203,3 +203,13 @@ class TestCharm(BaseTestCharm):
         data = self.harness.get_relation_data(rid, 'keystone-openidc/0')
         expected['user-facing-name'] = json.dumps('My IdP')
         self.assertDictEqual(data, expected)
+
+    def test_check_oidcresponsetype(self):
+        opts = {
+            'oidc-response-type': 'invalid_option'}
+        self.harness.update_config(
+            key_values=opts)
+        self.assertRaises(
+            charm.CharmConfigError,
+            self.harness.charm._check_oidcresponsetype
+        )
