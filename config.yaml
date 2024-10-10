@@ -94,6 +94,14 @@ options:
       'client-cookie:persistent:store_id_token'. When using multiple units
       of Keystone behind a proxy, use 'client-cookie:persistent' if you are
       not using shared session storage for Keystone.
+  oidc-response-type:
+    default: 'id_token'
+    type: string
+    description: |
+      Define the OIDCResponseType for mod_auth_openidc uses limit
+      the responses type. It must be one of the following:
+      code|id_token|id_token token|code id_token|code token|code id_token token
+      Empty string will remove that option completely.
   auth-type:
     default: 'auth-openidc'
     type: string
