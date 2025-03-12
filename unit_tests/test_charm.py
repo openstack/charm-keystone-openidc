@@ -84,9 +84,13 @@ class TestCharm(BaseTestCharm):
             rid, self.harness.charm.unit.app.name,
             {'oidc-crypto-passphrase': str(self.crypto_passphrase)})
 
+    @mock.patch('os.environ.get')
     @mock.patch('os.fchown')
     @mock.patch('os.chown')
-    def test_render_config_leader(self, chown, fchown):
+    def test_render_config_leader(self, chown, fchown, environ_get):
+        proxy_url = 'http://1.2.3.4:3128/'
+        fake_env = {'JUJU_CHARM_HTTPS_PROXY': proxy_url}
+        environ_get.side_effect = fake_env.get
         opts = {
             'oidc-provider-metadata-url': WELL_KNOWN_URL,
             'oidc-provider-issuer': 'foo',
@@ -117,6 +121,10 @@ class TestCharm(BaseTestCharm):
                 )
                 self.assertIn(
                     f'OIDCCryptoPassphrase {str(self.crypto_passphrase)}',
+                    content
+                )
+                self.assertIn(
+                    f'OIDCOutgoingProxy {proxy_url}',
                     content
                 )
 

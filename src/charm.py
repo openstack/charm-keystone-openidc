@@ -32,6 +32,7 @@ from ops_openstack.adapters import (
     ConfigurationAdapter,
 )
 from charmhelpers.contrib.openstack import templating as os_templating
+from charmhelpers.core import hookenv as ch_hookenv
 from charmhelpers.core import host as ch_host
 from charmhelpers.core import templating
 
@@ -133,6 +134,11 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             return None
 
     @property
+    def oidc_outgoing_proxy(self) -> Optional[str]:
+        proxies = ch_hookenv.env_proxy_settings()
+        return proxies.get('https_proxy', None)
+
+    @property
     def provider_metadata(self):
         """Metadata content offered by the Identity Provider.
 
@@ -143,8 +149,11 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
             logging.info('GETing content from %s',
                          self.oidc_provider_metadata_url)
             try:
+                proxies = ch_hookenv.env_proxy_settings()
+                logger.debug('Using proxies: %s', str(proxies))
                 r = requests.get(self.oidc_provider_metadata_url,
-                                 verify=SYSTEM_CA_CERT)
+                                 verify=SYSTEM_CA_CERT,
+                                 proxies=proxies)
                 return r.json()
             except Exception:
                 logger.exception(('Failed to GET json content from provider '

@@ -98,6 +98,12 @@ the keystone-openidc git repo:
   tox -e func-target -- noble-caracal --keep-model
 -->
 
+## Proxies
+
+The keystone-openidc charm uses the `juju-https-proxy` model configuration when
+set and its value is passed to
+[OIDCOutgoingProxy in Apache mod_auth_openidc module](https://github.com/OpenIDC/mod_auth_openidc/blob/v2.4.12.3/auth_openidc.conf#L839-L842).
+
 # Bugs
 
 Please report bugs on [Launchpad][keystone-openidc-filebug].
