@@ -3,4 +3,4 @@ host=review.opendev.org
 port=29418
 project=openstack/charm-keystone-openidc.git
 
-defaultbranch=stable/zed
+defaultbranch=stable/yoga
