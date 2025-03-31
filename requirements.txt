@@ -8,7 +8,7 @@ netaddr==0.8.0
 ops==2.2.0
 git+https://opendev.org/openstack/charm-ops-openstack@master#egg=ops_openstack
 pbr==5.11.1
-PyYAML==6.0
+PyYAML==6.0.1
 requests==2.28.2
 urllib3==1.26.15
 websocket-client==1.5.1
