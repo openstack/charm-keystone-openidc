@@ -136,7 +136,9 @@ class TestCharm(BaseTestCharm):
         missing_keys = self.harness.charm.find_missing_keys()
         missing_keys.sort()
 
-        expected = ['oidc_client_id', 'oidc_provider_metadata_url']
+        expected = ['idp_id',
+                    'oidc_client_id',
+                    'oidc_provider_metadata_url']
         expected.sort()
         self.assertEqual(missing_keys, expected)
 
@@ -150,7 +152,8 @@ class TestCharm(BaseTestCharm):
         missing_keys = self.harness.charm.find_missing_keys()
         missing_keys.sort()
 
-        expected = ['oidc_provider_auth_endpoint',
+        expected = ['idp_id',
+                    'oidc_provider_auth_endpoint',
                     'oidc_provider_token_endpoint',
                     'oidc_provider_token_endpoint_auth',
                     'oidc_provider_user_info_endpoint',
@@ -194,8 +197,8 @@ class TestCharm(BaseTestCharm):
         self.harness.charm._update_websso_data()
         data = self.harness.get_relation_data(rid, 'keystone-openidc/0')
         options = self.harness.charm.options
-        expected = {'protocol-name': json.dumps(options.idp_id),
-                    'idp-name': json.dumps(options.protocol_id),
+        expected = {'protocol-name': json.dumps(options.protocol_id),
+                    'idp-name': json.dumps(options.idp_id),
                     'user-facing-name': json.dumps(options.user_facing_name)}
         self.assertDictEqual(data, expected)
 

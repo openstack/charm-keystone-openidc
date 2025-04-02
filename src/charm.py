@@ -96,11 +96,6 @@ class KeystoneOpenIDCOptions(ConfigurationAdapter):
                 f'/protocols/openid/auth')
 
     @property
-    def idp_id(self) -> str:
-        """Identity provider name to use for URL generation."""
-        return 'openid'
-
-    @property
     def scheme(self) -> Optional[str]:
         data = self._get_principal_data()
         try:
@@ -195,7 +190,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
                           'cluster']
 
     REQUIRED_KEYS = ['oidc_crypto_passphrase', 'oidc_client_id',
-                     'hostname', 'port', 'scheme']
+                     'hostname', 'port', 'scheme', 'idp_id', 'protocol_id']
     APACHE2_MODULE = 'auth_openidc'
 
     CONFIG_FILE_OWNER = 'root'
@@ -270,7 +265,7 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
         # When (if) this patch is merged, we can use auth-method
         # https://review.opendev.org/c/openstack/charm-keystone/+/852601
         # data['auth-method'] = json.dumps(self.auth_method)
-        data['protocol-name'] = json.dumps(self.options.idp_id)
+        data['protocol-name'] = json.dumps(self.options.protocol_id)
         data['remote-id-attribute'] = json.dumps(
             self.options.remote_id_attribute)
 
@@ -292,8 +287,8 @@ class KeystoneOpenIDCCharm(ops_openstack.core.OSBaseCharm):
             return
 
         data = relation.data[self.unit]
-        data['protocol-name'] = json.dumps(self.options.idp_id)
-        data['idp-name'] = json.dumps(self.options.protocol_id)
+        data['protocol-name'] = json.dumps(self.options.protocol_id)
+        data['idp-name'] = json.dumps(self.options.idp_id)
         data['user-facing-name'] = json.dumps(self.options.user_facing_name)
 
     def _on_config_changed(self, event):
