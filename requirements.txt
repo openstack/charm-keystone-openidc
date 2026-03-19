@@ -6,7 +6,7 @@
 #
 certifi==2024.2.2
     # via requests
-charmhelpers @ git+https://github.com/juju/charm-helpers
+charmhelpers @ git+https://github.com/juju/charm-helpers@stable/caracal
     # via
     #   -r requirements.in
     #   ops-openstack
@@ -28,7 +28,7 @@ ops==2.12.0
     #   ops-openstack
 ops-openstack @ git+https://opendev.org/openstack/charm-ops-openstack@master
     # via -r requirements.in
-pbr==6.0.0
+pbr==7.0.3
     # via charmhelpers
 pyyaml==6.0.1
     # via
