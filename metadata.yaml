@@ -11,13 +11,14 @@ description: |
   Provider.
 
 tags:
-  - openstack
-  - identity
-  - federation
-  - openidc
+- openstack
+- identity
+- federation
+- openidc
 series:
-  - focal
-  - jammy
+- focal
+- jammy
+- noble
 provides:
   keystone-fid-service-provider:
     interface: keystone-fid-service-provider
