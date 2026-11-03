@@ -170,7 +170,7 @@ applications:
     charm: ch:vault
     to:
       - '16'
-    channel: latest/edge
+    channel: 1.8/stable
 
   placement:
     charm: ch:placement
