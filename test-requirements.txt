@@ -1,6 +1,7 @@
 coverage
-flake8
+flake8==7.1.1
 stestr
-git+https://github.com/openstack-charmers/zaza.git@stable/zed#egg=zaza
+zaza==2024.*
 git+https://github.com/openstack-charmers/zaza-openstack-tests.git@stable/zed#egg=zaza.openstack
 requests-mock
+setuptools<82.0.0
